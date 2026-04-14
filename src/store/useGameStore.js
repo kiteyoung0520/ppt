@@ -5,17 +5,61 @@ import { callApi } from '../services/api';
 const SRS_INTERVALS = [1, 3, 7, 14, 30, 60];
 
 export const NATIVE_PLANT_DB = [
-  { name: "黃花風鈴木", rarity: "Starter", emoji: "🌼", costToMax: 500, trait: "黃金光環", description: "增加初期獲得日光精華的速度 +20%", bonusType: "light_boost" },
-  { name: "馬鞍藤", rarity: "N", emoji: "🌱", costToMax: 100, trait: "海濱韌性", description: "在極端環境下也能生長，減少雨露消耗 10%", bonusType: "rain_save" },
-  { name: "紫金牛", rarity: "N", emoji: "🌿", costToMax: 100, trait: "林下之眼", description: "單字本複習獲得土壤精華 +5", bonusType: "soil_boost" },
-  { name: "台灣欒樹", rarity: "R", emoji: "🌳", costToMax: 300, trait: "四季變幻", description: "隨著季節更迭，隨機獲得一種精華補給", bonusType: "random_essence" },
-  { name: "山櫻花", rarity: "R", emoji: "🌸", costToMax: 300, trait: "春之報喜", description: "閱讀室分析完成後回饋更多金幣", bonusType: "coin_boost" },
-  { name: "台灣百合", rarity: "R", emoji: "💮", costToMax: 300, trait: "高山記憶", description: "提升 SRS 記憶演算法的精準度", bonusType: "srs_buff" },
-  { name: "水筆仔", rarity: "SR", emoji: "🎋", costToMax: 500, trait: "濕地守護", description: "自動修復一次學習漏接，保留連勝", bonusType: "streak_shield" },
-  { name: "愛玉子", rarity: "SR", emoji: "🍃", costToMax: 500, trait: "凝膠記憶", description: "暫時鎖定單字本，防止記憶衰退", bonusType: "vocab_lock" },
-  { name: "牛樟", rarity: "SSR", emoji: "🪵", costToMax: 1000, trait: "森林王者", description: "全屬性精華獲取速度提升 15%", bonusType: "all_boost" },
-  { name: "台灣肖楠", rarity: "SSR", emoji: "🌲", costToMax: 1000, trait: "神木之光", description: "即使不學習，每日也會自動產生微量精華", bonusType: "passive_gain" },
-  { name: "紅檜", rarity: "SSR", emoji: "🌲", costToMax: 1000, trait: "千年智慧", description: "解鎖高級 AI 模型使用權權（模擬）", bonusType: "ai_unlock" }
+  { 
+    name: "黃花風鈴木", rarity: "Starter", emoji: "🌼", costToMax: 500, 
+    trait: "黃金光環", description: "增加初期獲得日光精華的速度 +20%", bonusType: "light_boost",
+    region: "城市公園", story: "相傳它是從太陽遺落的碎片中誕生，在春天綻放時能點亮旅人的迷途，引導尋語者找到第一枚語言碎片。"
+  },
+  { 
+    name: "馬鞍藤", rarity: "N", emoji: "🌱", costToMax: 100, 
+    trait: "海濱韌性", description: "減少雨露消耗 10%", bonusType: "rain_save",
+    region: "墾丁海岸", story: "生長在波濤拍打的砂礫中，它是大海與陸地的信使，守護著所有漂洋過海而來的語言種子。"
+  },
+  { 
+    name: "紫金牛", rarity: "N", emoji: "🌿", costToMax: 100, 
+    trait: "林下之眼", description: "單字本複習獲得土壤精華 +5", bonusType: "soil_boost",
+    region: "低海拔山區", story: "靜靜棲息在神木腳下，擁有看穿記憶迷霧的能力，是尋語者在夜間複習時最可靠的陪伴。"
+  },
+  { 
+    name: "台灣欒樹", rarity: "R", emoji: "🌳", costToMax: 300, 
+    trait: "四季變幻", description: "隨機獲得精華補給", bonusType: "random_essence",
+    region: "中海拔森林", story: "被譽為「彩色樹」，它經歷過台灣四季的洗禮，每一片葉子的轉色都記錄著一段被遺忘的歷史節點。"
+  },
+  { 
+    name: "山櫻花", rarity: "R", emoji: "🌸", costToMax: 300, 
+    trait: "春之報喜", description: "閱讀分析回饋更多金幣", bonusType: "coin_boost",
+    region: "霧中森林", story: "泰雅族眼中的報春使者，當紅花綻放，代表語林的氣息再次甦醒，呼喚遠方的冒險者歸家。"
+  },
+  { 
+    name: "台灣百合", rarity: "R", emoji: "💮", costToMax: 300, 
+    trait: "高山記憶", description: "提升 SRS 記憶精準度", bonusType: "srs_buff",
+    region: "中央山脈", story: "在高山巔峰傲視風霜，象徵著尋語者對真理的無畏追求，唯有心靈純潔者能聽見它的花開聲。"
+  },
+  { 
+    name: "水筆仔", rarity: "SR", emoji: "🎋", costToMax: 500, 
+    trait: "濕地守護", description: "保留連勝進度", bonusType: "streak_shield",
+    region: "淡水紅樹林", story: "它以獨特的胎生方式守護下一代，如同老故事透過口述傳承，是語林中最強韌的防線。"
+  },
+  { 
+    name: "愛玉子", rarity: "SR", emoji: "🍃", costToMax: 500, 
+    trait: "凝膠記憶", description: "防止記憶衰退、鎖定進度", bonusType: "vocab_lock",
+    region: "高海拔原始林", story: "這是台灣特有的神奇靈草，它能將散亂的知識凝結為永恆的晶體，讓您的語感永不消散。"
+  },
+  { 
+    name: "牛樟", rarity: "SSR", emoji: "🪵", costToMax: 1000, 
+    trait: "森林王者", description: "全屬性精華獲取速度 +15%", bonusType: "all_boost",
+    region: "阿里山深處", story: "語林的守護君王。它的氣息能驅散一切失語之霧，解鎖它代表您已成為真正的「語林守護者」。"
+  },
+  { 
+    name: "台灣肖楠", rarity: "SSR", emoji: "🌲", costToMax: 1000, 
+    trait: "神木之光", description: "每日自動產生微量精華", bonusType: "passive_gain",
+    region: "原始檜木林", story: "台灣五木之一，即便在寂靜的深夜，它依然在深層土壤中低聲吟誦著古老的咒語。"
+  },
+  { 
+    name: "紅檜", rarity: "SSR", emoji: "🌲", costToMax: 1000, 
+    trait: "千年智慧", description: "解鎖高級 AI 權限", bonusType: "ai_unlock",
+    region: "塔塔加區域", story: "它是語林的活字典，見證了千年的文明興衰。能與紅檜對話的人，將獲得穿越語言界限的智慧。"
+  }
 ];
 
 export const useGameStore = create(
