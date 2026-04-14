@@ -86,19 +86,19 @@ const DashboardView = () => {
   return (
     <div className="w-full min-h-[100dvh] bg-forest-gradient relative flex items-center justify-center p-0 lg:p-6 overflow-hidden">
       {/* Dynamic Soundscape Background (Fireflies) */}
-      {[...Array(25)].map((_, i) => (
+      {[...Array(45)].map((_, i) => (
         <div 
           key={i} 
           className="firefly" 
           style={{
             left: `${Math.random() * 100}%`,
             top: `${Math.random() * 100}%`,
-            width: `${Math.random() * 2 + 1}px`,
-            height: `${Math.random() * 2 + 1}px`,
-            '--tw-translate-x': `${(Math.random() - 0.5) * 800}px`,
-            '--tw-translate-y': `${(Math.random() - 0.5) * 600}px`,
-            animationDelay: `${Math.random() * 10}s`,
-            animationDuration: `${15 + Math.random() * 20}s`
+            width: `${Math.random() * 3 + 1.5}px`,
+            height: `${Math.random() * 3 + 1.5}px`,
+            '--dx': `${(Math.random() - 0.5) * 600}px`,
+            '--dy': `${(Math.random() - 0.5) * 600}px`,
+            animationDelay: `${Math.random() * 20}s`,
+            animationDuration: `${10 + Math.random() * 15}s`
           }}
         ></div>
       ))}

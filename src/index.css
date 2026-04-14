@@ -53,21 +53,20 @@
 /* Firefly Animation */
 .firefly {
   position: absolute;
-  width: 2px;
-  height: 2px;
-  background: #fbbf24;
+  background: #fcd34d;
   border-radius: 50%;
-  filter: blur(1px);
-  animation: fly 15s infinite ease-in-out;
-  opacity: 0;
   pointer-events: none;
+  z-index: 0;
+  box-shadow: 0 0 8px 2px rgba(251, 191, 36, 0.4);
+  animation: fly 15s infinite ease-in-out;
+  filter: blur(0.5px);
 }
 
 @keyframes fly {
-  0% { transform: translate(0, 0); opacity: 0; }
-  10% { opacity: 0.6; }
-  90% { opacity: 0.6; }
-  100% { transform: translate(var(--tw-translate-x, 100px), var(--tw-translate-y, -100px)); opacity: 0; }
+  0% { transform: translate(0, 0) scale(1); opacity: 0; }
+  15% { opacity: 0.8; }
+  85% { opacity: 0.8; }
+  100% { transform: translate(var(--dx, 100px), var(--dy, -100px)) scale(1.5); opacity: 0; }
 }
 
 /* Landscape/Short Screen Optimization */
