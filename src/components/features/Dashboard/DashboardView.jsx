@@ -94,58 +94,57 @@ const DashboardView = () => {
         p-0 overflow-hidden lg:rounded-[2.5rem]
       `}>
 
-        {/* ── Premium Top HUD ─────────────────────────────────────── */}
-        <div className="shrink-0 flex items-center px-6 pt-4 pb-3 border-b border-white/10 gap-4">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
+        {/* ── Premium Top HUD (Compact on mobile) ──────────────── */}
+        <div className="shrink-0 flex items-center px-4 sm:px-6 py-2 sm:py-3 border-b border-white/10 gap-2 sm:gap-4 bg-black/5">
+          <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
              <div className="flex flex-col">
-                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-tighter">Forest Guardian</span>
-                <span className="text-sm font-black text-white truncate drop-shadow-md">
+                <span className="text-[8px] sm:text-[10px] font-black text-emerald-400 uppercase tracking-widest leading-none mb-1">Guardian</span>
+                <span className="text-xs sm:text-sm font-black text-white truncate drop-shadow-md">
                    {currentUser}
                 </span>
              </div>
             
-            <div className="flex items-center gap-2 ml-4">
-              {/* Streak Orb */}
-              <div className="essence-orb bg-orange-500/20 border-orange-400/50 text-orange-400 group" title="學習連勝">
-                 <span className="text-xs font-bold z-10">{streak}</span>
+            <div className="flex items-center gap-2 ml-2 sm:ml-4">
+              {/* Streak Orb (Reduced on mobile) */}
+              <div className="essence-orb w-7 h-7 sm:w-8 sm:h-8 bg-orange-500/20 border-orange-400/50 text-orange-400" title="學習連勝">
+                 <span className="text-[10px] sm:text-xs font-bold z-10">{streak}</span>
                  <div className="absolute inset-0 bg-orange-400/20 blur-md rounded-full animate-pulse-slow"></div>
               </div>
 
               {/* Coins Orb */}
               <button
                 onClick={() => setIsGreenhouseOpen(true)}
-                className="essence-orb bg-amber-500/20 border-amber-400/50 text-amber-400 hover:scale-110 active:scale-95 transition-all"
+                className="essence-orb w-7 h-7 sm:w-8 sm:h-8 bg-amber-500/20 border-amber-400/50 text-amber-400"
                 title="太陽金幣 / 溫室"
               >
-                <span className="text-[10px] font-bold z-10">{stats.coins}</span>
-                <div className="absolute inset-0 bg-amber-400/10 blur-sm rounded-full"></div>
+                <span className="text-[9px] sm:text-[10px] font-bold z-10">{stats.coins}</span>
               </button>
 
-              <div className="h-4 w-[1px] bg-white/10 mx-1"></div>
+              <div className="h-4 w-[1px] bg-white/10 mx-0.5"></div>
 
-              {/* Essence HUD */}
-              <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-3 py-1.5 rounded-full shadow-inner">
-                 <div className="flex items-center gap-1.5" title="日光精華">
-                    <div className="w-2 h-2 rounded-full bg-orange-400 shadow-[0_0_8px_rgba(251,146,60,0.8)]"></div>
-                    <span className="text-[11px] font-black text-orange-200">{stats.essence?.light || 0}</span>
+              {/* Essence HUD (Slimmer on mobile) */}
+              <div className="flex items-center gap-2 sm:gap-3 bg-white/5 border border-white/10 px-2 sm:px-3 py-1 rounded-full shadow-inner">
+                 <div className="flex items-center gap-1" title="日光">
+                    <div className="w-1.5 h-1.5 rounded-full bg-orange-400 shadow-[0_0_5px_rgba(251,146,60,0.8)]"></div>
+                    <span className="text-[10px] sm:text-[11px] font-black text-orange-200">{stats.essence?.light || 0}</span>
                  </div>
-                 <div className="flex items-center gap-1.5" title="雨露精華">
-                    <div className="w-2 h-2 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.8)]"></div>
-                    <span className="text-[11px] font-black text-blue-200">{stats.essence?.rain || 0}</span>
+                 <div className="flex items-center gap-1" title="雨露">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shadow-[0_0_5px_rgba(96,165,250,0.8)]"></div>
+                    <span className="text-[10px] sm:text-[11px] font-black text-blue-200">{stats.essence?.rain || 0}</span>
                  </div>
-                 <div className="flex items-center gap-1.5" title="土壤精華">
-                    <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div>
-                    <span className="text-[11px] font-black text-emerald-100">{stats.essence?.soil || 0}</span>
+                 <div className="hidden xs:flex items-center gap-1" title="土壤">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.8)]"></div>
+                    <span className="text-[10px] sm:text-[11px] font-black text-emerald-100">{stats.essence?.soil || 0}</span>
                  </div>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
              <LangSwitcher />
              <button
                onClick={() => { if(window.confirm('確定要離開語林之境嗎？')) logout(); }}
-               className="w-8 h-8 flex items-center justify-center bg-red-400/20 hover:bg-red-400/40 border border-red-400/30 text-red-100 rounded-full transition active:scale-95"
+               className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center bg-red-400/20 border border-red-400/30 text-xs rounded-full"
                title="登出"
              >
                 🚪
@@ -153,27 +152,27 @@ const DashboardView = () => {
           </div>
         </div>
 
-        {/* ── Organic Tab Bar ────────────────────────────────────────── */}
-        <div className="shrink-0 flex px-2 pt-1 border-b border-white/5 overflow-x-auto no-scrollbar bg-black/10">
+        {/* ── Tabs (Better touch targets) ─────────────────────────── */}
+        <div className="shrink-0 flex px-1 border-b border-white/5 overflow-x-auto no-scrollbar bg-black/10">
           {tabs.map(t => (
             <button
               key={t.id}
               onClick={() => setActiveTab(t.id)}
               className={`
-                flex-1 flex flex-col items-center justify-center py-3 px-2 min-w-[70px]
-                transition-all relative
+                flex-1 flex flex-col items-center justify-center py-2 sm:py-3 px-1 min-w-[60px] sm:min-w-[70px]
+                transition-all relative h-12 sm:h-16
                 ${activeTab === t.id
-                  ? 'text-emerald-400 font-bold'
+                  ? 'text-emerald-400 font-bold bg-white/5'
                   : 'text-stone-300 hover:text-white'}
               `}
             >
-              <span className={`text-xl mb-1 ${activeTab === t.id ? 'animate-float' : ''}`}>{t.label}</span>
-              <span className="text-[10px] uppercase font-black tracking-widest">{t.name}</span>
+              <span className={`text-base sm:text-xl ${activeTab === t.id ? 'animate-float' : ''}`}>{t.label}</span>
+              <span className="text-[8px] sm:text-[9px] uppercase font-black tracking-widest mt-0.5">{t.name}</span>
               {activeTab === t.id && (
-                <div className="absolute bottom-0 left-1/4 right-1/4 h-[3px] bg-emerald-400 rounded-t-full shadow-[0_0_12px_rgba(52,211,153,0.8)]"></div>
+                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]"></div>
               )}
               {t.badge > 0 && (
-                <span className="absolute top-2 right-4 w-4 h-4 bg-orange-500 text-white text-[9px] rounded-full flex items-center justify-center font-bold border border-white/20">
+                <span className="absolute top-1 right-2 sm:right-4 w-3.5 h-3.5 sm:w-4 sm:h-4 bg-orange-500 text-white text-[8px] sm:text-[9px] rounded-full flex items-center justify-center font-bold border border-white/20">
                   {t.badge}
                 </span>
               )}
