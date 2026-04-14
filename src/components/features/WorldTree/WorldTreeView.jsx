@@ -1,403 +1,134 @@
 import React, { useState } from 'react';
 import { useSettings } from '../../../context/SettingsContext';
 import { useAuth } from '../../../context/AuthContext';
-import { useGame, NATIVE_PLANT_DB } from '../../../context/GameContext';
+import { useGame } from '../../../context/GameContext';
 import { callApi } from '../../../services/api';
 import { toast } from '../../ui/Toast';
 
 const WorldTreeView = ({ onSendToSpecimen }) => {
   const { currentLang } = useSettings();
   const { apiKey } = useAuth();
-  const { stats, addEssence, setStats } = useGame();
+  const { addEssence, setStats } = useGame();
   
-  const [activeRegion, setActiveRegion] = useState('城市公園');
-  const [selectedPlant, setSelectedPlant] = useState(null);
   const [wisdomLeaf, setWisdomLeaf] = useState(null);
-  const [isLeafLoading, setIsLeafLoading] = useState(false);
-  
-  // Mobile UI Logic: Determine if we should show the Lore full-screen
-  const [mobileLoreView, setMobileLoreView] = useState(false);
+  const [activeReward, setActiveReward] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Adventure Events State
-  const [activeEvent, setActiveEvent] = useState(null);
-  const [answerResult, setAnswerResult] = useState(null);
+  const interactWithTree = async () => {
+    if (isLoading) return;
+    
+    // 30% chance for a mystery reward, 70% for a reading quote
+    const isReward = Math.random() < 0.3;
 
-  // Gacha Summoning States
-  const [summonConfirmPlant, setSummonConfirmPlant] = useState(null);
-  const [isSummoning, setIsSummoning] = useState(false);
-  const [summoningPlant, setSummoningPlant] = useState(null);
-
-  const { stats, addEssence, setStats, unlockPlant } = useGame();
-  
-  const regions = [...new Set(NATIVE_PLANT_DB.map(p => p.region))];
-  const unlockedArr = Array.isArray(stats.unlockedPlants) ? stats.unlockedPlants : [];
-  
-  const regionPlants = NATIVE_PLANT_DB.filter(p => p.region === activeRegion);
-  const isRegionComplete = regionPlants.every(p => unlockedArr.includes(p.name) || p.rarity === 'Starter');
-
-  // Trigger Adventure Event
-  const triggerAdventure = () => {
-    const dice = Math.random();
-    if (dice > 0.7) { // 30% chance to trigger an event on region switch
-      const isChallenge = Math.random() > 0.4; // 60% challenge, 40% blessing
-      
-      if (isChallenge) {
-        // Simple language puzzle (Mock dynamic challenge)
-        const challenges = [
-          { q: `「${activeRegion}」的守護靈問：'Ephemeral' 的中文是什麼？`, a: '瞬息萬變', options: ['堅定不移', '瞬息萬變', '色彩鮮艷'] },
-          { q: `語林微風吹下句子：'The _____ of nature is vast.'`, a: 'beauty', options: ['beauty', 'beautifully', 'beautify'] },
-          { q: `在日文中，描述『極致森林』的語境常用？`, a: '神祕的', options: ['吵鬧的', '神祕的', '昂貴的'] }
-        ];
-        const picked = challenges[Math.floor(Math.random() * challenges.length)];
-        setActiveEvent({ type: 'challenge', ...picked });
-      } else {
-        const rewards = [
-          { msg: '山間的泉水流過，獲得大量的【雨露精華】！', type: 'rain', amount: 50 },
-          { msg: '太陽照耀著圖卷，獲得大量的【日光精華】！', type: 'light', amount: 50 },
-          { msg: '深層土壤被喚醒，獲得大量的【土壤精華】！', type: 'soil', amount: 50 }
-        ];
-        const reward = rewards[Math.floor(Math.random() * rewards.length)];
-        setActiveEvent({ type: 'blessing', ...reward });
-        addEssence(reward.type, reward.amount);
+    if (isReward) {
+      const rewards = [
+        { msg: '微風輕拂，世界樹的枝葉散落了閃耀的日光！', type: 'light', amount: 30, icon: '☀️', name: '陽光洗禮' },
+        { msg: '一陣清雨拂過，洗滌了心靈，感覺神清氣爽！', type: 'rain', amount: 30, icon: '💧', name: '春雨恩典' },
+        { msg: '你感受到深層大地的共鳴，獲取了厚實的養分！', type: 'soil', amount: 30, icon: '🌱', name: '大地脈動' },
+      ];
+      const r = rewards[Math.floor(Math.random() * rewards.length)];
+      addEssence(r.type, r.amount);
+      setStats(prev => ({ ...prev, coins: (prev.coins || 0) + 15 }));
+      setActiveReward(r);
+      setWisdomLeaf(null);
+    } else {
+      // Fetch Quote
+      setIsLoading(true);
+      try {
+        const res = await callApi('getRandomQuote', {}, apiKey, currentLang.key);
+        if (res.status === 'success' && res.data) {
+          setWisdomLeaf(res.data);
+          setActiveReward(null);
+        }
+      } catch (err) {
+        toast("森林起霧了，無法看清葉片上的字：" + err.message);
+      } finally {
+        setIsLoading(false);
       }
     }
   };
 
-  const handleAnswer = (option) => {
-    if (option === activeEvent.a) {
-      setAnswerResult('correct');
-      addEssence('soil', 30);
-      setStats(prev => ({ ...prev, coins: (prev.coins || 0) + 10 }));
-      toast("✨ 考驗通過！獲得土壤精華 +30, 陽光幣 +10");
-    } else {
-      setAnswerResult('wrong');
-      toast("🍃 考驗失敗，靈氣消散了...");
-    }
-  };
-
-  const handleRegionChange = (r) => {
-    setActiveRegion(r);
-    setSelectedPlant(null);
-    setAnswerResult(null);
-    setActiveEvent(null);
-    setMobileLoreView(false); // Reset view on region change
-    triggerAdventure();
-  };
-
-  const handlePlantClick = (p) => {
-    const isUnlocked = unlockedArr.includes(p.name) || p.rarity === 'Starter';
-    if (!isUnlocked) {
-      setSummonConfirmPlant(p);
-      return;
-    }
-    setSelectedPlant(p);
+  const closeResult = () => {
     setWisdomLeaf(null);
-    setMobileLoreView(true); // Switch to Lore view on mobile
-  };
-
-  const confirmSummon = (plant) => {
-    if (unlockPlant(plant.name, plant.costToMax)) {
-      setSummonConfirmPlant(null);
-      setIsSummoning(true);
-      setSummoningPlant(plant);
-      
-      // Play dramatic 3-second summon animation before revealing
-      setTimeout(() => {
-        setIsSummoning(false);
-        setSummoningPlant(null);
-        setSelectedPlant(plant);
-        setMobileLoreView(true);
-        toast(`✨ 成功喚醒 ${plant.rarity} 級守護靈：${plant.name}！`);
-      }, 3000);
-    } else {
-       toast("❌ 靈氣精華不足，無法喚醒！請進行單字測驗或探險來收集。");
-    }
-  };
-
-  const fetchWisdomLeaf = async () => {
-    setIsLeafLoading(true);
-    try {
-      const res = await callApi('getRandomQuote', {}, apiKey, currentLang.key);
-      if (res.status === 'success' && res.data) {
-        setWisdomLeaf(res.data);
-        setMobileLoreView(true);
-      }
-    } catch (err) {
-      toast("世界樹葉片飄落失敗：" + err.message);
-    } finally {
-      setIsLeafLoading(false);
-    }
+    setActiveReward(null);
   };
 
   return (
-    <div className="flex flex-col h-full w-full bg-[#020817] text-white relative overflow-hidden font-chn">
+    <div className="flex flex-col h-full w-full bg-[#020817] text-white relative overflow-hidden font-chn items-center justify-center p-4">
       
-      {/* ── 頂部地區導航 (固定高度) ────────────────────────── */}
-      <div className="shrink-0 p-4 bg-black/60 border-b border-white/5 z-20">
-        <div className="flex items-center justify-between mb-2">
-           <div className="flex flex-col">
-              <h2 className="text-lg font-black text-emerald-400 tracking-tighter">探索：{activeRegion}</h2>
-              <span className="text-[7px] text-orange-400 font-bold uppercase tracking-widest">System Link v1.4 ● Restored</span>
-           </div>
-           <span className="text-[9px] bg-white/5 px-2 py-1 rounded-full text-stone-500 font-bold uppercase tracking-widest leading-none">
-             Region Explore
-           </span>
+      {/* Background Decor */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(16,185,129,0.05)_0%,_transparent_70%)] pointer-events-none"></div>
+
+      {/* Main Tree Interaction Area */}
+      <div 
+         onClick={interactWithTree}
+         className={`relative z-10 flex flex-col items-center justify-center cursor-pointer group transition-all duration-700 ${isLoading ? 'scale-95 opacity-80' : 'hover:scale-105'}`}
+      >
+        <div className="text-[120px] sm:text-[180px] drop-shadow-[0_0_80px_rgba(16,185,129,0.4)] animate-pulse-slow transition-transform duration-500 group-hover:-translate-y-4">
+           🌳
         </div>
-        <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
-          {regions.map(r => (
-            <button
-              key={r}
-              onClick={() => handleRegionChange(r)}
-              className={`px-4 py-1.5 rounded-full text-[10px] font-black whitespace-nowrap transition-all border ${
-                activeRegion === r ? 'bg-emerald-500 border-emerald-400 text-white shadow-lg' : 'bg-white/5 border-white/10 text-stone-500'
-              }`}
-            >
-              {r}
-            </button>
-          ))}
+        <div className="mt-8 px-8 py-4 rounded-full border border-emerald-500/20 bg-emerald-950/40 text-emerald-400 font-bold tracking-widest uppercase text-sm shadow-[0_0_30px_rgba(16,185,129,0.1)] group-hover:bg-emerald-900/60 transition-all flex items-center gap-3 active:scale-95">
+           {isLoading ? (
+              <>
+                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                 <span>與樹靈共鳴中...</span>
+              </>
+           ) : (
+              <>
+                 <span>✨</span> 
+                 <span>點擊與世界樹共鳴</span>
+              </>
+           )}
         </div>
-      </div>
-
-      {/* ── 抽卡召喚動畫層 (Summon Animation) ───────────────── */}
-      {isSummoning && summoningPlant && (
-        <div className="fixed inset-0 z-[200] bg-black flex flex-col items-center justify-center overflow-hidden">
-           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(16,185,129,0.3)_0%,_transparent_70%)] animate-pulse-slow"></div>
-           {/* 魔法陣旋轉 */}
-           <div className="w-64 h-64 border-[4px] border-dashed border-emerald-500/50 rounded-full animate-spin flex items-center justify-center">
-              <div className="w-48 h-48 border-[2px] border-emerald-400 rounded-full animate-reverse-spin"></div>
-           </div>
-           
-           <div className="absolute flex items-center justify-center animate-ping">
-              <span className="text-white text-2xl font-black tracking-[1em] ml-[1em]">喚醒中</span>
-           </div>
-
-           {/* 爆發耀光 (模擬最後揭曉前的高潮) */}
-           <div className="absolute inset-0 bg-white opacity-0 animate-[flash_3s_ease-in-out_forwards] pointer-events-none"></div>
-        </div>
-      )}
-
-      {/* ── 召喚確認彈窗 ─────────────────────────────────────── */}
-      {summonConfirmPlant && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-stone-900 border-2 border-emerald-500/50 p-8 rounded-[3rem] max-w-sm w-full text-center relative shadow-2xl">
-            <div className="text-5xl mb-4 grayscale opacity-50">{summonConfirmPlant.emoji}</div>
-            <h3 className="text-xl font-black text-white mb-2">未知的守護靈</h3>
-            <p className="text-stone-400 text-xs mb-6 px-4">
-               此區域蘊藏著強大的靈力。是否消耗精華來嘗試喚醒？
-            </p>
-            
-            <div className="bg-black/50 p-4 rounded-3xl mb-6">
-               <div className="text-[10px] font-black text-emerald-500 tracking-widest uppercase mb-2">Required Essence</div>
-               <div className="text-xl font-bold text-white mb-1">{summonConfirmPlant.costToMax}</div>
-               <div className="text-[10px] text-stone-500">目前總合: {(stats?.essence?.light||0) + (stats?.essence?.rain||0) + (stats?.essence?.soil||0)}</div>
-            </div>
-
-            <div className="flex gap-3">
-              <button 
-                onClick={() => setSummonConfirmPlant(null)}
-                className="flex-1 py-3.5 rounded-2xl bg-white/5 text-stone-400 font-bold text-sm"
-              >
-                取消
-              </button>
-              <button 
-                onClick={() => confirmSummon(summonConfirmPlant)}
-                className="flex-[2] py-3.5 rounded-2xl bg-emerald-600 text-white font-black text-sm uppercase shadow-[0_0_20px_rgba(16,185,129,0.3)] active:scale-95 transition-all"
-              >
-                注入靈氣喚醒
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── 主互動區塊 ─────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col min-h-0 relative">
         
-        {/* 手機版：橫向滑動牌卡 (確保有固定最小高度，防止坍塌) */}
-        <div className={`
-          flex-1 flex flex-col p-4 sm:p-8 min-h-0
-          ${mobileLoreView ? 'hidden lg:flex' : 'flex'}
-        `}>
-          <div className="text-[10px] font-black text-emerald-400/50 uppercase tracking-[0.4em] mb-4 text-center lg:text-left">
-             Select A Guardian Spirit
-          </div>
-          
-          {/* 卡片橫向滑動容器 - 強制指定高度並開啟手機滑動優化 */}
-          <div 
-            className="flex-1 flex items-center gap-6 overflow-x-auto snap-x snap-mandatory px-4 py-4 no-scrollbar lg:grid lg:grid-cols-3 lg:overflow-y-auto lg:px-0"
-            style={{ 
-              WebkitOverflowScrolling: 'touch',
-              touchAction: 'pan-x'
-            }}
-          >
-            {regionPlants.map(p => {
-              const isUnlocked = unlockedArr.includes(p.name) || p.rarity === 'Starter';
-              return (
-                <div
-                  key={p.name}
-                  onClick={() => handlePlantClick(p)}
-                  className={`
-                    shrink-0 w-64 h-80 sm:w-80 sm:h-[400px] snap-center rounded-[3rem] border-2 flex flex-col items-center justify-center gap-6 relative transition-all active:scale-95 shadow-2xl
-                    lg:w-full lg:h-auto lg:aspect-square cursor-pointer
-                    ${isUnlocked 
-                      ? 'bg-gradient-to-br from-stone-900 to-black border-emerald-500/30' 
-                      : 'bg-black border-dashed border-white/20 hover:border-emerald-500/50'}
-                  `}
-                >
-                  {isUnlocked && (
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(16,185,129,0.1)_0%,_transparent_70%)] pointer-events-none"></div>
-                  )}
-                  
-                  <div className={`text-7xl sm:text-8xl drop-shadow-2xl transition-transform ${isUnlocked ? 'group-hover:scale-110' : 'grayscale opacity-30 blur-sm group-hover:blur-none transition-all'}`}>
-                    {isUnlocked ? p.emoji : '❓'}
-                  </div>
-
-                  <div className="text-center px-4">
-                     <div className={`text-[9px] font-black uppercase tracking-[0.3em] mb-1 ${isUnlocked ? 'text-emerald-400' : 'text-stone-600'}`}>
-                        {isUnlocked ? p.rarity : 'Sealed'} Guardian
-                     </div>
-                     <h3 className={`text-xl sm:text-2xl font-black ${isUnlocked ? 'text-white' : 'text-stone-600'}`}>
-                        {isUnlocked ? p.name : '等待喚醒'}
-                     </h3>
-                  </div>
-
-                  {isUnlocked ? (
-                     <div className="absolute bottom-10 flex flex-col items-center group">
-                        <div className="text-[8px] font-bold text-emerald-400/40 uppercase tracking-widest animate-pulse">View Lore</div>
-                        <div className="w-1 h-4 bg-gradient-to-b from-emerald-500 to-transparent mt-2 rounded-full"></div>
-                     </div>
-                  ) : (
-                     <div className="absolute bottom-10 px-4 py-2 bg-white/5 border border-white/10 rounded-full text-[10px] font-bold text-stone-400 uppercase tracking-widest flex items-center gap-2">
-                        <span>🔒 Unlock</span>
-                        <span className="text-emerald-500 font-eng">{p.costToMax}</span>
-                     </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* 摘葉按鈕 (固定在底部，不隨內容滑動) */}
-          <button
-            onClick={fetchWisdomLeaf}
-            disabled={isLeafLoading}
-            className="mt-6 w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white font-black text-[10px] uppercase tracking-[0.3em] shadow-[0_10px_40px_rgba(5,150,105,0.3)] flex items-center justify-center gap-3 transition-all active:scale-95 shrink-0"
-          >
-            {isLeafLoading ? '🍃 ...' : '🍃 摘取智慧之葉'}
-          </button>
+        <div className="absolute -bottom-16 text-center text-[10px] text-stone-500 font-bold uppercase tracking-[0.3em]">
+           Tap to receive Wisdom or Blessing
         </div>
-
-        {/* ── 手機全屏故事層 (選中植物後浮現) ────────────────────── */}
-        {mobileLoreView && (
-          <div className="absolute inset-0 z-[60] bg-black/95 flex flex-col lg:relative lg:bg-transparent lg:z-10 lg:w-1/2 lg:flex animate-slideUp">
-             
-             {/* 故事層標題與返回鈕 */}
-             <div className="shrink-0 p-6 flex items-center justify-between border-b border-white/5 bg-black/40">
-                <div className="flex items-center gap-3">
-                   <span className="text-2xl">{selectedPlant?.emoji || wisdomLeaf?.emoji || '📖'}</span>
-                   <div>
-                      <h3 className="text-lg font-black text-white">{selectedPlant?.name || '手扎內容'}</h3>
-                      <p className="text-[10px] text-stone-500 font-bold uppercase tracking-widest">Chronicle Details</p>
-                   </div>
-                </div>
-                <button 
-                  onClick={() => setMobileLoreView(false)}
-                  className="w-10 h-10 flex items-center justify-center bg-white/5 border border-white/10 rounded-full text-white active:scale-90"
-                >
-                  ✕
-                </button>
-             </div>
-
-             {/* 滾動的故事內容塊 */}
-             <div className="flex-1 overflow-y-auto p-6 sm:p-10 scroll-smooth custom-scroll bg-gradient-to-b from-stone-900/50 to-black">
-                {selectedPlant ? (
-                  <div className="animate-fadeIn max-w-2xl mx-auto">
-                     <div className="text-orange-400 text-xs font-bold italic mb-6 border-l-2 border-orange-400 pl-4 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse"></span>
-                        {selectedPlant.trait}
-                     </div>
-                     <p className="text-emerald-50/90 text-[16px] sm:text-lg leading-relaxed whitespace-pre-wrap font-medium">
-                        {selectedPlant.story}
-                     </p>
-                     
-                     <div className="mt-10 p-6 bg-emerald-500/5 border border-emerald-400/20 rounded-[2.5rem]">
-                        <div className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-3">Guardian Benefit</div>
-                        <div className="text-sm text-white/70 leading-relaxed font-chn">{selectedPlant.description}</div>
-                     </div>
-                  </div>
-                ) : wisdomLeaf ? (
-                  <div className="animate-fadeIn text-center max-w-xl mx-auto py-8">
-                     <div className="text-6xl mb-8 opacity-20">❝</div>
-                     <p className="font-eng text-xl sm:text-3xl font-black text-white italic mb-6 leading-tight">
-                        {wisdomLeaf.eng}
-                     </p>
-                     <div className="text-xs text-stone-500 font-bold tracking-[0.2em] mb-10">— {wisdomLeaf.author} —</div>
-                     <div className="bg-white/5 border border-white/10 p-6 sm:p-10 rounded-[3rem] text-emerald-100 text-[15px] sm:text-lg leading-relaxed shadow-xl">
-                        {wisdomLeaf.chn}
-                     </div>
-                     {onSendToSpecimen && (
-                       <button onClick={() => onSendToSpecimen(wisdomLeaf.eng)} className="mt-10 py-4 px-10 bg-indigo-600 text-white font-black text-[10px] rounded-full uppercase tracking-widest active:scale-95 shadow-2xl">📤 分析此手扎</button>
-                     )}
-                  </div>
-                ) : (
-                  <div className="h-full flex items-center justify-center text-center opacity-20 px-10">
-                    <p className="text-xs font-black uppercase tracking-[0.5em]">Scroll to awakening</p>
-                  </div>
-                )}
-                
-                {/* 底部預留空間確保滑動到底部 */}
-                <div className="h-20"></div>
-             </div>
-          </div>
-        )}
-
       </div>
 
-      {/* ── 隨機挑戰彈窗 (最高層級穩定版) ─────────────────────────── */}
-      {activeEvent && !selectedPlant && !wisdomLeaf && (
-        <div 
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl animate-fadeIn cursor-pointer"
-          onClick={() => (activeEvent.type !== 'challenge' || answerResult) && setActiveEvent(null)}
-        >
-          <div 
-            className="bg-[#1c1c1c] border-2 border-emerald-500 p-6 rounded-[2.5rem] max-w-[300px] w-full shadow-[0_0_50px_rgba(0,0,0,1)] text-center relative cursor-default"
-            onClick={(e) => e.stopPropagation()}
-          >
-             <div className="text-4xl mb-4">{activeEvent.type === 'challenge' ? '🛡️' : '✨'}</div>
-             <h3 className="text-xl font-black mb-2 text-white">{activeEvent.type === 'challenge' ? '守護者的試煉' : '森林的饋贈'}</h3>
-             
-             <p className="text-emerald-100/70 text-sm mb-6 leading-relaxed px-2 font-medium">
-                {activeEvent.type === 'challenge' ? activeEvent.q : activeEvent.msg}
-             </p>
-             
-             {/* 只有在挑戰模式且尚未回答時，才顯示選項 */}
-             {activeEvent.type === 'challenge' && !answerResult ? (
-               <div className="flex flex-col gap-2">
-                  {activeEvent.options.map(opt => (
-                    <button 
-                      key={opt} 
-                      onClick={() => handleAnswer(opt)} 
-                      className="w-full py-3.5 rounded-2xl bg-white/10 border border-white/20 text-white text-sm font-black active:bg-emerald-500 transition-all shadow-inner"
-                    >
-                      {opt}
-                    </button>
-                  ))}
-               </div>
-             ) : (
-               /* 其他所有情況（饋贈或是已回答挑戰）都強制顯示此按鈕 */
-               <button 
-                 onClick={() => setActiveEvent(null)} 
-                 className="w-full py-4 rounded-full bg-emerald-500 text-white font-black text-xs uppercase tracking-widest shadow-[0_0_25px_rgba(16,185,129,0.5)] active:scale-95 transition-all mt-2 border-2 border-white/20"
-               >
-                 確認並繼續
-               </button>
-             )}
-             
-             {/* 應急輔助文字 */}
-             <div className="mt-4 text-[9px] text-stone-600 font-bold uppercase tracking-widest">
-                Tap anywhere to continue
-             </div>
+      {/* Reward Popup */}
+      {activeReward && (
+        <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-6 animate-fadeIn" onClick={closeResult}>
+          <div className="bg-[#0f172a] border border-emerald-500/30 p-10 rounded-[3rem] max-w-[320px] w-full text-center shadow-2xl relative" onClick={e => e.stopPropagation()}>
+             <div className="text-7xl mb-6 animate-bounce">{activeReward.icon}</div>
+             <div className="text-[10px] font-black tracking-widest text-emerald-500 uppercase mb-2">Mystic Blessing</div>
+             <h3 className="text-2xl font-black text-white mb-4">{activeReward.name}</h3>
+             <p className="text-stone-400 text-sm mb-8 leading-relaxed font-medium px-2">{activeReward.msg}</p>
+             <button onClick={closeResult} className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 rounded-2xl text-white font-black tracking-widest text-xs uppercase shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all active:scale-95">
+               收下這份饋贈
+             </button>
           </div>
+        </div>
+      )}
+
+      {/* Wisdom Leaf (Quote) Popup */}
+      {wisdomLeaf && (
+        <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-xl p-4 sm:p-8 animate-fadeIn">
+           <div className="w-full max-w-2xl bg-[#0f172a] border border-white/10 rounded-[3rem] p-8 sm:p-14 relative overflow-y-auto max-h-full custom-scroll shadow-[0_0_100px_rgba(0,0,0,1)] animate-slideUp">
+              
+              <button onClick={closeResult} className="absolute top-6 right-6 w-12 h-12 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center text-stone-400 transition-all text-xl">✕</button>
+              
+              <div className="text-center mb-8">
+                 <div className="text-[10px] text-emerald-400 font-black tracking-[0.5em] uppercase mb-2">Wisdom Leaf</div>
+                 <div className="text-5xl opacity-20 mx-auto text-emerald-500">❝</div>
+              </div>
+
+              <p className="font-eng text-2xl sm:text-4xl font-black text-white italic mb-10 leading-relaxed text-center drop-shadow-md px-2">
+                 {wisdomLeaf.eng}
+              </p>
+              
+              <div className="text-center text-stone-500 font-bold tracking-[0.2em] mb-12">— {wisdomLeaf.author} —</div>
+              
+              <div className="bg-emerald-950/20 border border-emerald-500/10 p-8 rounded-[2.5rem] text-emerald-50 text-[15px] sm:text-lg leading-relaxed mb-10 font-medium">
+                 {wisdomLeaf.chn}
+              </div>
+
+              {onSendToSpecimen && (
+                 <button onClick={() => { onSendToSpecimen(wisdomLeaf.eng); closeResult(); }} className="w-full py-5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 rounded-2xl text-white font-black tracking-widest uppercase text-sm shadow-[0_0_40px_rgba(16,185,129,0.3)] transition-all active:scale-95 flex items-center justify-center gap-3">
+                    <span className="text-lg">📤</span> 分析並學習這句話
+                 </button>
+              )}
+           </div>
         </div>
       )}
     </div>
