@@ -56,18 +56,23 @@ const TranslatorView = () => {
       }
       
       if (fullResult) {
-        if ('speechSynthesis' in window) {
-           window.speechSynthesis.cancel();
-           const u = new SpeechSynthesisUtterance(fullResult);
-           u.lang = dir === 'native' ? currentLang.speechCode : 'zh-TW';
-           u.rate = speechRate || 1.0;
-           window.speechSynthesis.speak(u);
-        }
+        speakTranslation(fullResult, dir);
       }
     } catch (e) {
       toast("口譯錯誤: " + e.message);
     } finally {
       setIsTranslating(false);
+    }
+  };
+
+  const speakTranslation = (text, dir) => {
+    if (!text) return;
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = dir === 'native' ? currentLang.speechCode : 'zh-TW';
+      u.rate = speechRate || 1.0;
+      window.speechSynthesis.speak(u);
     }
   };
 
@@ -122,6 +127,13 @@ const TranslatorView = () => {
     };
     
     recognitionRef.current = rec;
+    
+    // Prime speech synthesis to unlock audio on mobile
+    if ('speechSynthesis' in window) {
+      const u = new SpeechSynthesisUtterance("");
+      window.speechSynthesis.speak(u);
+    }
+    
     rec.start();
   };
 
@@ -163,9 +175,20 @@ const TranslatorView = () => {
             {/* Output / Translation Block */}
             {(isTranslating || translationText) && (
               <div className={`w-full bg-stone-800 rounded-3xl p-5 shadow-inner border-2 border-stone-700 flex-1 flex flex-col items-start transition-all ${translationText ? 'animate-popup-fade' : ''}`}>
-                <span className="text-xs font-bold px-2 py-1 rounded bg-stone-700 text-stone-300 mb-2">
-                  AI 極速口譯
-                </span>
+                <div className="flex justify-between items-start mb-2">
+                  <span className="text-xs font-bold px-2 py-1 rounded bg-stone-700 text-stone-300">
+                    AI 極速口譯
+                  </span>
+                  {translationText && !isTranslating && (
+                    <button 
+                      onClick={() => speakTranslation(translationText, activeDirection)}
+                      className="w-10 h-10 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center text-xl shadow-lg transition active:scale-95"
+                      title="朗讀結果"
+                    >
+                      🔊
+                    </button>
+                  )}
+                </div>
                 <div className="text-white font-bold text-2xl sm:text-3xl lg:text-4xl leading-snug w-full h-full overflow-y-auto custom-scroll">
                   {translationText}
                   {isTranslating && <span className="inline-block w-3 h-8 bg-orange-400 ml-2 animate-pulse translate-y-1"></span>}
