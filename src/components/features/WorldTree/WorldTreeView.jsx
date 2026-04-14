@@ -104,7 +104,10 @@ const WorldTreeView = ({ onSendToSpecimen }) => {
       {/* ── 頂部地區導航 (固定高度) ────────────────────────── */}
       <div className="shrink-0 p-4 bg-black/60 border-b border-white/5 z-20">
         <div className="flex items-center justify-between mb-2">
-           <h2 className="text-lg font-black text-emerald-400 tracking-tighter">探索：{activeRegion}</h2>
+           <div className="flex flex-col">
+              <h2 className="text-lg font-black text-emerald-400 tracking-tighter">探索：{activeRegion}</h2>
+              <span className="text-[7px] text-orange-400 font-bold uppercase tracking-widest">System Link v1.2 ● Online</span>
+           </div>
            <span className="text-[9px] bg-white/5 px-2 py-1 rounded-full text-stone-500 font-bold uppercase tracking-widest leading-none">
              Region Explore
            </span>
