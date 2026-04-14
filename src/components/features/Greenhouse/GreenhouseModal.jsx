@@ -23,7 +23,7 @@ const GreenhouseModal = ({ isOpen, onClose }) => {
         unlockedPlants: Array.isArray(newUnlocked) ? newUnlocked.join(',') : newUnlocked
       };
 
-      await callApi('saveUserStats', {
+      await callApi('updateUserStats', {
         userId: currentUser,
         stats: updatedStatsObj
       }, apiKey);
