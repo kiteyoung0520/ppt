@@ -42,30 +42,37 @@ export const useGameStore = create(
 
       // --- Actions: Essence ---
       addEssence: (type, amount) => {
-        set((state) => ({
-          stats: {
-            ...state.stats,
-            essence: {
-              ...state.stats.essence,
-              [type]: state.stats.essence[type] + amount
+        set((state) => {
+          const currentEssence = state.stats?.essence || { light: 0, rain: 0, soil: 0 };
+          return {
+            stats: {
+              ...state.stats,
+              essence: {
+                ...currentEssence,
+                [type]: (currentEssence[type] || 0) + amount
+              }
             }
-          }
-        }));
+          };
+        });
       },
 
       // --- Actions: Growth ---
       evolvePlant: (cost) => {
         const { stats } = get();
+        const light = stats?.essence?.light || 0;
         // Now requires both coins and light essence to reflect the "Guardian" logic
-        if (stats.coins >= cost && stats.essence.light >= (cost / 10)) {
-          set((state) => ({
-            stats: {
-              ...state.stats,
-              coins: state.stats.coins - cost,
-              essence: { ...state.stats.essence, light: state.stats.essence.light - (cost / 10) },
-              plantStage: state.stats.plantStage + 1
-            }
-          }));
+        if (stats.coins >= cost && light >= (cost / 10)) {
+          set((state) => {
+            const currentEssence = state.stats?.essence || { light: 0, rain: 0, soil: 0 };
+            return {
+              stats: {
+                ...state.stats,
+                coins: state.stats.coins - cost,
+                essence: { ...currentEssence, light: Math.max(0, currentEssence.light - (cost / 10)) },
+                plantStage: state.stats.plantStage + 1
+              }
+            };
+          });
           return true;
         }
         return false;
@@ -73,6 +80,18 @@ export const useGameStore = create(
 
       // --- Actions: Migration ---
       migrateLegacyData: () => {
+        const { stats } = get();
+        // Self-heal: If essence is missing, add it
+        if (!stats.essence) {
+          console.log("Store: Initializing missing essence field...");
+          set({
+            stats: {
+              ...stats,
+              essence: { light: 0, rain: 0, soil: 0 }
+            }
+          });
+        }
+
         const legacyVocab = localStorage.getItem('flg_vocab');
         const legacyStreak = localStorage.getItem('flg_streak');
         const legacyLastStudy = localStorage.getItem('flg_lastStudy');
@@ -97,9 +116,14 @@ export const useGameStore = create(
       },
 
       // --- Actions: Stats ---
-      setStats: (newStats) => set((state) => ({ 
-        stats: { ...state.stats, ...newStats } 
-      })),
+      setStats: (newStats) => set((state) => {
+        const updatedStats = { ...state.stats, ...newStats };
+        // Ensure essence is NEVER lost during generic setStats
+        if (newStats.essence) {
+           updatedStats.essence = { ...(state.stats.essence || {}), ...newStats.essence };
+        }
+        return { stats: updatedStats };
+      }),
 
       refreshStats: async (userId, apiKey) => {
         if (!userId) return;
