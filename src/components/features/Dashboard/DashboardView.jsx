@@ -164,11 +164,11 @@ const DashboardView = () => {
                 transition-all relative
                 ${activeTab === t.id
                   ? 'text-emerald-400 font-bold'
-                  : 'text-white/40 hover:text-white/70'}
+                  : 'text-stone-300 hover:text-white'}
               `}
             >
               <span className={`text-xl mb-1 ${activeTab === t.id ? 'animate-float' : ''}`}>{t.label}</span>
-              <span className="text-[10px] uppercase tracking-tighter">{t.name}</span>
+              <span className="text-[10px] uppercase font-black tracking-widest">{t.name}</span>
               {activeTab === t.id && (
                 <div className="absolute bottom-0 left-1/4 right-1/4 h-[3px] bg-emerald-400 rounded-t-full shadow-[0_0_12px_rgba(52,211,153,0.8)]"></div>
               )}

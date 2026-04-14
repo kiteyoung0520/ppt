@@ -29,13 +29,13 @@ Output ONLY the article text. Do not use Markdown headings or formatting. Pure t
   return (
     <div className="flex flex-col items-center justify-center h-full p-4 animate-popup-fade">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-stone-800 font-chn mb-2">種下一顆語文的種子</h2>
-        <p className="text-stone-500 font-chn text-sm">輸入任何您感興趣的主題，一秒內即刻生成屬於您的專屬文章。</p>
+        <h2 className="text-3xl font-black text-white font-chn mb-3 drop-shadow-[0_2px_10px_rgba(255,255,255,0.2)]">種下一顆語文的種子</h2>
+        <p className="text-emerald-100/80 font-chn text-base max-w-lg leading-relaxed">輸入任何您感興趣的主題，一秒內即刻生成屬於您的專屬文章。</p>
       </div>
 
-      <div className="w-full max-w-md bg-white/60 p-6 rounded-3xl shadow-[inset_0_2px_4px_rgba(0,0,0,0.06)] border border-stone-200">
-        <div className="mb-4">
-           <label className="block text-xs font-bold text-stone-500 mb-1 ml-1">文章主題 (Topic)</label>
+      <div className="w-full max-w-md premium-glass p-8 rounded-[2.5rem] border border-white/20">
+        <div className="mb-5">
+           <label className="block text-xs font-black text-emerald-400 uppercase tracking-widest mb-2 ml-1">文章主題 (Topic)</label>
            <input 
              type="text" 
              value={topic}
@@ -46,13 +46,13 @@ Output ONLY the article text. Do not use Markdown headings or formatting. Pure t
         </div>
 
         <div className="mb-6">
-           <label className="block text-xs font-bold text-stone-500 mb-1 ml-1">難度等級 (Level)</label>
-           <div className="flex justify-between bg-stone-100 p-1.5 rounded-full">
+           <label className="block text-xs font-black text-emerald-400 uppercase tracking-widest mb-2 ml-1">難度等級 (Level)</label>
+           <div className="flex justify-between bg-white/40 p-1.5 rounded-full border border-white/20">
              {['A1', 'A2', 'B1', 'B2', 'C1'].map(lvl => (
                <button
                  key={lvl}
                  onClick={() => setLevel(lvl)}
-                 className={`flex-1 py-1.5 rounded-full text-sm font-bold transition-all ${level === lvl ? 'bg-emerald-500 text-white shadow-md' : 'text-stone-400 hover:text-stone-600'}`}
+                 className={`flex-1 py-1.5 rounded-full text-sm font-black transition-all ${level === lvl ? 'bg-emerald-600 text-white shadow-lg' : 'text-stone-600 hover:text-stone-900'}`}
                >
                  {lvl}
                </button>
@@ -62,17 +62,17 @@ Output ONLY the article text. Do not use Markdown headings or formatting. Pure t
 
         <button 
           onClick={handleStart}
-          className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl shadow-[0_5px_15px_-3px_rgba(5,150,105,0.4)] transition-transform active:scale-95 flex justify-center items-center gap-2 mb-4"
+          className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl shadow-[0_5px_15px_-3px_rgba(5,150,105,0.4)] transition-all active:scale-95 flex justify-center items-center gap-2 mb-6"
         >
-           <span>🪄 開始培育文章</span>
+           <span className="text-lg">🪄 開始培育文章</span>
         </button>
 
         {/* Current Guardian Trait */}
-        <div className="bg-orange-50/80 border border-orange-200 rounded-2xl p-3 flex items-center gap-3 animate-fadeIn">
-          <div className="text-2xl">{currentPlantInfo.emoji}</div>
+        <div className="bg-orange-400/10 border border-orange-400/30 rounded-2xl p-4 flex items-center gap-4 animate-fadeIn">
+          <div className="text-3xl filter drop-shadow-md">{currentPlantInfo.emoji}</div>
           <div>
-            <div className="text-[10px] font-bold text-orange-400 uppercase tracking-widest">目前守護靈：{currentPlantInfo.trait}</div>
-            <div className="text-xs text-stone-600 leading-tight">{currentPlantInfo.description}</div>
+            <div className="text-[10px] font-black text-orange-400 uppercase tracking-widest mb-1 shadow-orange-900/10">目前守護靈：{currentPlantInfo.trait}</div>
+            <div className="text-xs text-emerald-50 leading-tight font-medium">{currentPlantInfo.description}</div>
           </div>
         </div>
       </div>
