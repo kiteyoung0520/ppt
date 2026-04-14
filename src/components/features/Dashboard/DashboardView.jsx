@@ -7,6 +7,7 @@ import { useSettings } from '../../../context/SettingsContext';
 // Feature Views
 import NurseryView from '../Nursery/NurseryView';
 import ReadingRoom from '../ReadingRoom/ReadingRoom';
+import ChroniclesView from '../Chronicles/ChroniclesView';
 import WorldTreeView from '../WorldTree/WorldTreeView';
 import GreenhouseModal from '../Greenhouse/GreenhouseModal';
 import EchoValleyView from '../EchoValley/EchoValleyView';
@@ -61,6 +62,7 @@ const DashboardView = () => {
     { id: 'vocab',     label: '📚', name: '單字本', badge: savedWords.filter(w => w.nextReview <= Date.now()).length },
     { id: 'paste',     label: '🔬', name: '標本室' },
     { id: 'translate', label: '🕊️', name: '隨身口譯' },
+    { id: 'chronicles', label: '📜', name: '長卷' },
   ];
 
   const handleStartReading = (taskTitle, prompt) => {
@@ -189,6 +191,7 @@ const DashboardView = () => {
             {activeTab === 'vocab' && <VocabBookView />}
             {activeTab === 'paste' && <SpecimenRoomView key={specimenText} initialText={specimenText} />}
             {activeTab === 'translate' && <TranslatorView />}
+            {activeTab === 'chronicles' && <ChroniclesView />}
           </div>
         </div>
       </div>
