@@ -8,7 +8,7 @@ import { toast } from '../../ui/Toast';
 const WorldTreeView = ({ onSendToSpecimen }) => {
   const { currentLang } = useSettings();
   const { apiKey } = useAuth();
-  const { addEssence, setStats } = useGame();
+  const { stats, addEssence, setStats } = useGame();
   
   const [wisdomLeaf, setWisdomLeaf] = useState(null);
   const [activeReward, setActiveReward] = useState(null);
@@ -28,7 +28,7 @@ const WorldTreeView = ({ onSendToSpecimen }) => {
       ];
       const r = rewards[Math.floor(Math.random() * rewards.length)];
       addEssence(r.type, r.amount);
-      setStats(prev => ({ ...prev, coins: (prev.coins || 0) + 15 }));
+      setStats({ coins: (stats?.coins || 0) + 15 });
       setActiveReward(r);
       setWisdomLeaf(null);
     } else {
