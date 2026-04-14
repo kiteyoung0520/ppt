@@ -2,60 +2,70 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer utilities {
-  .custom-scroll::-webkit-scrollbar { width: 6px; }
-  .custom-scroll::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); border-radius: 4px; }
-  .custom-scroll::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 4px; }
-  .custom-scroll::-webkit-scrollbar-thumb:hover { background: #a8a29e; }
-  
-  .perspective-1000 { perspective: 1000px; }
-  .transform-style-3d { transform-style: preserve-3d; }
-  .backface-hidden { backface-visibility: hidden; }
-  .rotate-y-180 { transform: rotateY(180deg); }
-  .group.flipped .content-box { transform: rotateY(180deg); }
+@layer base {
+  body {
+    @apply bg-[#0f172a] text-stone-100 min-h-[100dvh] flex flex-col items-center justify-center font-sans overflow-hidden;
+  }
+}
 
-  .pixel-art { image-rendering: pixelated; image-rendering: crisp-edges; }
+@layer utilities {
+  .custom-scroll::-webkit-scrollbar { width: 4px; }
+  .custom-scroll::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); }
+  .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+  
+  .animate-slow-spin { animation: spin 20s linear infinite; }
+  .animate-float { animation: float 6s ease-in-out infinite; }
+  .animate-pulse-slow { animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+  
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+
+  .bg-forest-gradient {
+    background: radial-gradient(circle at 10% 20%, rgba(5, 150, 105, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(30, 41, 59, 1) 0%, rgba(15, 23, 42, 1) 100%);
+    background-color: #0f172a;
+  }
 }
 
 @layer components {
-  .glass-panel {
-      background: rgba(250, 249, 246, 0.96); 
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(231, 229, 228, 0.8);
-      box-shadow: 0 20px 40px -10px rgba(120, 113, 108, 0.15);
+  .premium-glass {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)];
+  }
+  
+  .essence-orb {
+    @apply relative flex items-center justify-center w-8 h-8 rounded-full shadow-lg border border-white/20 transition-transform;
   }
 
-  .wood-shelf {
-      background: linear-gradient(to bottom, #d6d3d1, #a8a29e);
-      border-bottom: 4px solid #78716c;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);
+  .essence-orb:hover {
+    @apply scale-110 shadow-white/10;
   }
 
   .clickable-word { 
-      cursor: pointer; padding: 2px 0; border-radius: 4px; transition: background-color 0.2s, color 0.2s; 
+    @apply cursor-pointer px-0.5 rounded transition-all duration-200;
   }
   .clickable-word:hover { 
-      background-color: #ffedd5; color: #c2410c; text-decoration: underline; 
+    @apply bg-emerald-500/20 text-emerald-300 underline underline-offset-4 scale-110;
   }
-
-  .mic-active { background-color: #f97316 !important; }
-  .mic-active-blue { background-color: #2563eb !important; box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7) !important;}
-  .mic-active-emerald { background-color: #059669 !important; box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.7) !important;}
 }
 
-body {
-  @apply bg-gradient-to-br from-stone-200 via-orange-50 to-stone-100 min-h-[100dvh] flex flex-col items-center justify-center font-sans text-stone-800;
-  /* Allow page-level scroll only when needed on very small screens */
-  overflow-x: hidden;
-  overflow-y: auto;
+/* Firefly Animation */
+.firefly {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: #fbbf24;
+  border-radius: 50%;
+  filter: blur(1px);
+  animation: fly 15s infinite ease-in-out;
+  opacity: 0;
+  pointer-events: none;
 }
 
-/* ---------- Responsive Reading Room Adjustments ---------- */
-@media (min-width: 1024px) {
-  /* Wider screens: reading room uses more space */
-  .reading-room-container {
-    padding-left: 4rem;
-    padding-right: 4rem;
-  }
+@keyframes fly {
+  0% { transform: translate(0, 0); opacity: 0; }
+  10% { opacity: 0.6; }
+  90% { opacity: 0.6; }
+  100% { transform: translate(var(--tw-translate-x, 100px), var(--tw-translate-y, -100px)); opacity: 0; }
 }

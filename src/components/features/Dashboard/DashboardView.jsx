@@ -52,7 +52,6 @@ const DashboardView = () => {
   const [activeTab, setActiveTab] = useState('topic');
   const [readingSession, setReadingSession] = useState(null);
   const [isGreenhouseOpen, setIsGreenhouseOpen] = useState(false);
-  // Specimen: holds text sent from WorldTree or user paste
   const [specimenText, setSpecimenText] = useState('');
 
   const tabs = [
@@ -68,7 +67,6 @@ const DashboardView = () => {
     setReadingSession({ title: taskTitle, prompt });
   };
 
-  // Called by WorldTree — switches to paste tab with article text
   const handleSendToSpecimen = (text) => {
     setSpecimenText(text);
     setActiveTab('paste');
@@ -86,67 +84,129 @@ const DashboardView = () => {
   }
 
   return (
-    // ── Outer shell: full viewport, flex-center, responsive padding ──
-    <div className="w-full min-h-[100dvh] flex items-center justify-center p-2 sm:p-4 lg:p-6">
+    <div className="w-full min-h-[100dvh] bg-forest-gradient relative flex items-center justify-center p-0 lg:p-6 overflow-hidden">
+      {/* Background Particles (Fireflies) */}
+      {[...Array(20)].map((_, i) => (
+        <div key={i} className="firefly" style={{
+          left: `${Math.random() * 100}%`,
+          top: `${Math.random() * 100}%`,
+          '--tw-translate-x': `${(Math.random() - 0.5) * 400}px`,
+          '--tw-translate-y': `${(Math.random() - 0.5) * 400}px`,
+          animationDelay: `${Math.random() * 10}s`
+        }}></div>
+      ))}
+
       <GreenhouseModal isOpen={isGreenhouseOpen} onClose={() => setIsGreenhouseOpen(false)} />
 
-      {/* ── Main card: responsive architecture ────────────────────── */}
-      <GlassPanel className={`
-        relative w-full flex flex-col
+      <div className={`
+        relative w-full flex flex-col premium-glass
         max-w-none lg:max-w-7xl
-        h-[100dvh] sm:h-[98dvh] lg:h-[95dvh]
-        p-0 overflow-hidden sm:rounded-[2rem]
+        h-[100dvh] lg:h-[90dvh]
+        p-0 overflow-hidden lg:rounded-[2.5rem]
       `}>
 
-        {/* ── Top Bar ─────────────────────────────────────────────── */}
-        <div className="shrink-0 flex items-center px-4 pt-3 pb-2 border-b border-stone-100 gap-3 relative">
-          {/* User name + counters */}
-          <div className="flex items-center gap-1.5 flex-1 min-w-0 pr-24 bg-gradient-to-r from-transparent via-white/50 to-transparent">
-            <span className="text-xs font-bold text-stone-600 bg-stone-100 border border-stone-200 px-2.5 py-1 rounded-full truncate max-w-[100px]">
-              {currentUser}
-            </span>
+        {/* ── Premium Top HUD ─────────────────────────────────────── */}
+        <div className="shrink-0 flex items-center px-6 pt-4 pb-3 border-b border-white/10 gap-4">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+             <div className="flex flex-col">
+                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-tighter">Forest Guardian</span>
+                <span className="text-sm font-black text-white truncate drop-shadow-md">
+                   {currentUser}
+                </span>
+             </div>
             
-            {/* Streak Counter */}
-            <div className="flex items-center gap-1 bg-orange-50 border border-orange-200 px-2.5 py-1 rounded-full text-xs font-bold text-orange-600 shadow-sm" title="學習連勝天數">
-              🔥 <span>{streak}</span>
-            </div>
-
-            {/* Coins / Greenhouse */}
-            <button
-              onClick={() => setIsGreenhouseOpen(true)}
-              className="flex items-center gap-1 bg-white hover:bg-amber-50 border border-amber-200 hover:border-orange-300 px-2.5 py-1 rounded-full text-xs font-bold text-amber-600 shadow-sm transition active:scale-95 shrink-0"
-              title="溫室扭蛋機"
-            >
-              <span>🌞 <span>{stats.coins}</span></span>
-            </button>
-
-            {/* NEW: Essence Indicators */}
-            <div className="flex items-center gap-1 bg-white/50 border border-stone-100 px-2 py-1 rounded-full shadow-inner ml-2">
-              <div className="flex items-center gap-0.5 px-1.5" title="日光精華 (來自閱讀分析)">
-                <span className="text-[10px]">✨</span>
-                <span className="text-[11px] font-bold text-orange-500">{stats.essence?.light || 0}</span>
+            <div className="flex items-center gap-2 ml-4">
+              {/* Streak Orb */}
+              <div className="essence-orb bg-orange-500/20 border-orange-400/50 text-orange-400 group" title="學習連勝">
+                 <span className="text-xs font-bold z-10">{streak}</span>
+                 <div className="absolute inset-0 bg-orange-400/20 blur-md rounded-full animate-pulse-slow"></div>
               </div>
-              <div className="flex items-center gap-0.5 px-1.5 border-l border-stone-200" title="雨露精華 (來自口說練習)">
-                <span className="text-[10px]">💧</span>
-                <span className="text-[11px] font-bold text-blue-500">{stats.essence?.rain || 0}</span>
-              </div>
-              <div className="flex items-center gap-0.5 px-1.5 border-l border-stone-200" title="土壤精華 (來自單字複習)">
-                <span className="text-[10px]">🌿</span>
-                <span className="text-[11px] font-bold text-emerald-600">{stats.essence?.soil || 0}</span>
+
+              {/* Coins Orb */}
+              <button
+                onClick={() => setIsGreenhouseOpen(true)}
+                className="essence-orb bg-amber-500/20 border-amber-400/50 text-amber-400 hover:scale-110 active:scale-95 transition-all"
+                title="太陽金幣 / 溫室"
+              >
+                <span className="text-[10px] font-bold z-10">{stats.coins}</span>
+                <div className="absolute inset-0 bg-amber-400/10 blur-sm rounded-full"></div>
+              </button>
+
+              <div className="h-4 w-[1px] bg-white/10 mx-1"></div>
+
+              {/* Essence HUD */}
+              <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-3 py-1.5 rounded-full shadow-inner">
+                 <div className="flex items-center gap-1.5" title="日光精華">
+                    <div className="w-2 h-2 rounded-full bg-orange-400 shadow-[0_0_8px_rgba(251,146,60,0.8)]"></div>
+                    <span className="text-[11px] font-black text-orange-200">{stats.essence?.light || 0}</span>
+                 </div>
+                 <div className="flex items-center gap-1.5" title="雨露精華">
+                    <div className="w-2 h-2 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.8)]"></div>
+                    <span className="text-[11px] font-black text-blue-200">{stats.essence?.rain || 0}</span>
+                 </div>
+                 <div className="flex items-center gap-1.5" title="土壤精華">
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div>
+                    <span className="text-[11px] font-black text-emerald-100">{stats.essence?.soil || 0}</span>
+                 </div>
               </div>
             </div>
           </div>
 
-          <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
-            <button
-              onClick={() => { if(window.confirm('確定要登出嗎？')) logout(); }}
-              className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-full text-xs font-bold transition shadow-md active:scale-95 flex items-center gap-1"
-            >
-               🚪 登出
-            </button>
-            <LangSwitcher />
+          <div className="flex items-center gap-3">
+             <LangSwitcher />
+             <button
+               onClick={() => { if(window.confirm('確定要離開語林之境嗎？')) logout(); }}
+               className="w-8 h-8 flex items-center justify-center bg-red-400/20 hover:bg-red-400/40 border border-red-400/30 text-red-100 rounded-full transition active:scale-95"
+               title="登出"
+             >
+                🚪
+             </button>
           </div>
         </div>
+
+        {/* ── Organic Tab Bar ────────────────────────────────────────── */}
+        <div className="shrink-0 flex px-2 pt-1 border-b border-white/5 overflow-x-auto no-scrollbar bg-black/10">
+          {tabs.map(t => (
+            <button
+              key={t.id}
+              onClick={() => setActiveTab(t.id)}
+              className={`
+                flex-1 flex flex-col items-center justify-center py-3 px-2 min-w-[70px]
+                transition-all relative
+                ${activeTab === t.id
+                  ? 'text-emerald-400 font-bold'
+                  : 'text-white/40 hover:text-white/70'}
+              `}
+            >
+              <span className={`text-xl mb-1 ${activeTab === t.id ? 'animate-float' : ''}`}>{t.label}</span>
+              <span className="text-[10px] uppercase tracking-tighter">{t.name}</span>
+              {activeTab === t.id && (
+                <div className="absolute bottom-0 left-1/4 right-1/4 h-[3px] bg-emerald-400 rounded-t-full shadow-[0_0_12px_rgba(52,211,153,0.8)]"></div>
+              )}
+              {t.badge > 0 && (
+                <span className="absolute top-2 right-4 w-4 h-4 bg-orange-500 text-white text-[9px] rounded-full flex items-center justify-center font-bold border border-white/20">
+                  {t.badge}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Immersive Content Area ────────────────────────────────── */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-8 custom-scroll bg-gradient-to-b from-transparent to-black/20">
+          <div className="h-full">
+            {activeTab === 'topic' && <NurseryView onStartReading={handleStartReading} />}
+            {activeTab === 'explore' && <WorldTreeView onSendToSpecimen={handleSendToSpecimen} />}
+            {activeTab === 'speak' && <EchoValleyView />}
+            {activeTab === 'vocab' && <VocabBookView />}
+            {activeTab === 'paste' && <SpecimenRoomView key={specimenText} initialText={specimenText} />}
+            {activeTab === 'translate' && <TranslatorView />}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
         {/* ── Tab Bar ─────────────────────────────────────────────── */}
         <div className="shrink-0 flex border-b border-stone-100 overflow-x-auto no-scrollbar">

@@ -2,7 +2,7 @@ import React from 'react';
 
 const GlassPanel = ({ children, className = '' }) => {
   return (
-    <div className={`glass-panel rounded-3xl ${className}`}>
+    <div className={`premium-glass rounded-3xl ${className}`}>
       {children}
     </div>
   );
