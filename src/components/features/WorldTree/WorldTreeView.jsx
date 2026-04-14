@@ -101,59 +101,30 @@ const WorldTreeView = ({ onSendToSpecimen }) => {
   return (
     <div className="flex flex-col h-full w-full bg-[#020817] text-white relative overflow-hidden font-chn">
       
-      {/* ── 羅盤式地區輪盤 (新設計) ────────────────────────── */}
-      <div className="shrink-0 h-40 sm:h-52 bg-black/40 border-b border-emerald-500/20 relative overflow-hidden flex items-center justify-center">
-        {/* 背景裝飾：旋轉的光輝 */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_150%,_rgba(16,185,129,0.15)_0%,_transparent_70%)] opacity-50"></div>
-        
-        {/* 核心輪盤 */}
-        <div className="relative w-72 h-72 sm:w-96 sm:h-96 rounded-full border-4 border-white/5 flex items-center justify-center transition-transform duration-700 ease-out mt-32"
-             style={{ transform: `rotate(${(regions.indexOf(activeRegion) * -72) + 180}deg)` }}>
-          
-          {/* 刻度與定位線 */}
-          {regions.map((r, idx) => {
-            const angle = idx * 72; // 360 / 5 regions
-            const isActive = activeRegion === r;
-            return (
-              <div 
-                key={r}
-                className="absolute w-full h-full flex justify-center py-4"
-                style={{ transform: `rotate(${angle}deg)` }}
-              >
-                <button
-                  onClick={() => handleRegionChange(r)}
-                  style={{ transform: `rotate(-${angle + ((regions.indexOf(activeRegion) * -72) + 180)}deg)` }}
-                  className={`
-                    px-4 py-2 rounded-xl text-[10px] font-black whitespace-nowrap transition-all duration-500
-                    ${isActive 
-                      ? 'bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.5)] border border-white/40 scale-125' 
-                      : 'text-stone-500 opacity-60 hover:opacity-100 hover:text-emerald-300'
-                    }
-                  `}
-                >
-                  {r}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* 羅盤指針與系統資訊 */}
-        <div className="absolute top-4 left-0 w-full px-6 flex justify-between items-start pointer-events-none">
+      {/* ── 頂部地區導航 (固定高度) ────────────────────────── */}
+      <div className="shrink-0 p-4 bg-black/60 border-b border-white/5 z-20">
+        <div className="flex items-center justify-between mb-2">
            <div className="flex flex-col">
-              <h2 className="text-xl font-black text-white tracking-widest font-chn drop-shadow-lg">探索區域</h2>
-              <div className="flex items-center gap-2">
-                 <div className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse"></div>
-                 <span className="text-[8px] text-orange-400/80 font-bold uppercase tracking-[0.2em]">{activeRegion} ● 接連中</span>
-              </div>
+              <h2 className="text-lg font-black text-emerald-400 tracking-tighter">探索：{activeRegion}</h2>
+              <span className="text-[7px] text-orange-400 font-bold uppercase tracking-widest">System Link v1.4 ● Restored</span>
            </div>
-           <div className="text-[8px] text-white/20 font-bold text-right border-r border-emerald-500/20 pr-3 py-1">
-              SYSTEM v1.5<br/>GEARS ONLINE
-           </div>
+           <span className="text-[9px] bg-white/5 px-2 py-1 rounded-full text-stone-500 font-bold uppercase tracking-widest leading-none">
+             Region Explore
+           </span>
         </div>
-
-        {/* 羅盤對焦框 */}
-        <div className="absolute top-[60%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 border-2 border-emerald-500/30 rounded-2xl rotate-45 pointer-events-none"></div>
+        <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
+          {regions.map(r => (
+            <button
+              key={r}
+              onClick={() => handleRegionChange(r)}
+              className={`px-4 py-1.5 rounded-full text-[10px] font-black whitespace-nowrap transition-all border ${
+                activeRegion === r ? 'bg-emerald-500 border-emerald-400 text-white shadow-lg' : 'bg-white/5 border-white/10 text-stone-500'
+              }`}
+            >
+              {r}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* ── 主互動區塊 ─────────────────────────────────────── */}
