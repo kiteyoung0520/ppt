@@ -84,32 +84,14 @@ const DashboardView = () => {
   }
 
   return (
-    <div className="w-full min-h-[100dvh] bg-forest-gradient relative flex items-center justify-center p-0 lg:p-6 overflow-hidden">
-      {/* Dynamic Soundscape Background (Fireflies) */}
-      {[...Array(45)].map((_, i) => (
-        <div 
-          key={i} 
-          className="firefly" 
-          style={{
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-            width: `${Math.random() * 3 + 1.5}px`,
-            height: `${Math.random() * 3 + 1.5}px`,
-            '--dx': `${(Math.random() - 0.5) * 600}px`,
-            '--dy': `${(Math.random() - 0.5) * 600}px`,
-            animationDelay: `${Math.random() * 20}s`,
-            animationDuration: `${10 + Math.random() * 15}s`
-          }}
-        ></div>
-      ))}
-
+    <div className="w-full min-h-[100dvh] bg-[#0f172a] relative flex items-center justify-center p-0 lg:p-6 overflow-hidden">
       <GreenhouseModal isOpen={isGreenhouseOpen} onClose={() => setIsGreenhouseOpen(false)} />
 
       <div className={`
         relative w-full flex flex-col premium-glass
         max-w-none lg:max-w-7xl
         h-[100dvh] lg:h-[90dvh]
-        p-0 overflow-hidden lg:rounded-[2.5rem]
+        p-0 overflow-hidden lg:rounded-3xl
       `}>
 
         {/* ── Premium Top HUD (Compact on mobile) ──────────────── */}
