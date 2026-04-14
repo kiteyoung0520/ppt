@@ -5,6 +5,10 @@ import { toast } from '../../ui/Toast';
 
 const NurseryView = ({ onStartReading }) => {
   const { currentLang } = useSettings();
+  const { stats } = useGame();
+  
+  const currentPlantInfo = NATIVE_PLANT_DB.find(p => p.name === (stats?.currentPlant || '黃花風鈴木')) || NATIVE_PLANT_DB[0];
+  
   const [topic, setTopic] = useState('');
   const [level, setLevel] = useState('B1'); // A1, A2, B1, B2, C1
 
