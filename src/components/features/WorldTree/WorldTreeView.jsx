@@ -266,22 +266,35 @@ const WorldTreeView = ({ onSendToSpecimen }) => {
 
       {/* ── 隨機挑戰彈窗 (最高層級) ─────────────────────────── */}
       {activeEvent && !selectedPlant && !wisdomLeaf && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/90 backdrop-blur-xl animate-fadeIn">
-          <div className="bg-stone-900 border border-white/10 p-8 rounded-[3rem] max-w-sm w-full shadow-2xl text-center relative overflow-hidden">
-             <div className="text-5xl mb-4">{activeEvent.type === 'challenge' ? '🛡️' : '✨'}</div>
-             <h3 className="text-xl font-black mb-2 tracking-tighter">{activeEvent.type === 'challenge' ? '守護者的試煉' : '森林的饋贈'}</h3>
-             <p className="text-white/60 text-sm mb-8 leading-relaxed px-4">{activeEvent.type === 'challenge' ? activeEvent.q : activeEvent.msg}</p>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl animate-fadeIn">
+          <div className="bg-stone-900 border border-emerald-500/50 p-6 sm:p-8 rounded-[2.5rem] max-w-[320px] w-full shadow-2xl text-center relative overflow-visible">
+             <div className="text-4xl mb-3">{activeEvent.type === 'challenge' ? '🛡️' : '✨'}</div>
+             <h3 className="text-lg font-black mb-1 text-white">{activeEvent.type === 'challenge' ? '守護者的試煉' : '森林的饋贈'}</h3>
+             <p className="text-white/60 text-xs mb-6 leading-relaxed px-2">
+                {activeEvent.type === 'challenge' ? activeEvent.q : activeEvent.msg}
+             </p>
              
              {activeEvent.type === 'challenge' && !answerResult && (
                <div className="flex flex-col gap-2">
                   {activeEvent.options.map(opt => (
-                    <button key={opt} onClick={() => handleAnswer(opt)} className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 text-white text-sm font-bold active:bg-emerald-500 transition-all">{opt}</button>
+                    <button 
+                      key={opt} 
+                      onClick={() => handleAnswer(opt)} 
+                      className="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-bold active:bg-emerald-600 transition-all"
+                    >
+                      {opt}
+                    </button>
                   ))}
                </div>
              )}
              
              {(activeEvent.type === 'blessing' || answerResult) && (
-               <button onClick={() => setActiveEvent(null)} className="w-full py-4 rounded-full bg-emerald-600 font-black text-xs uppercase tracking-widest mt-2 shadow-xl">繼續探索</button>
+               <button 
+                 onClick={() => setActiveEvent(null)} 
+                 className="w-full py-3.5 rounded-full bg-emerald-500 text-white font-black text-xs uppercase tracking-widest shadow-[0_0_20px_rgba(16,185,129,0.4)] active:scale-90 transition-all"
+               >
+                 繼續探險
+               </button>
              )}
           </div>
         </div>
