@@ -1,3 +1,4 @@
+import React, { useState, useEffect, useRef } from 'react';
 import { useSettings } from '../../../context/SettingsContext';
 import { useAuth } from '../../../context/AuthContext';
 import { useGame } from '../../../context/GameContext';

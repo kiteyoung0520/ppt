@@ -380,13 +380,13 @@ ${content}`;
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-6 h-full overflow-hidden">
+      <div className="flex flex-col md:flex-row gap-6 h-full overflow-y-auto md:overflow-hidden custom-scroll">
         {/* Main Reading Area */}
         <div
           ref={scrollRef}
           onMouseUp={handleTextSelection}
           onTouchEnd={handleTextSelection}
-          className="flex-[1.5] bg-white rounded-3xl shadow-sm p-6 overflow-y-auto custom-scroll text-lg leading-loose font-eng border border-stone-200 select-text min-h-[40vh] md:min-h-0"
+          className="w-full md:flex-[1.5] bg-white rounded-3xl shadow-sm p-6 shrink-0 md:shrink md:overflow-y-auto custom-scroll text-lg leading-loose font-eng border border-stone-200 select-text"
         >
           <div className="text-xs text-stone-400 mb-4 font-chn flex items-center gap-3">
             <span>💡 <strong>點擊單字</strong>查詢意思與發音</span>
@@ -402,7 +402,7 @@ ${content}`;
         </div>
 
         {/* Side Panel */}
-        <div className="w-full md:w-1/3 flex flex-col gap-4 overflow-y-auto custom-scroll pr-2 relative">
+        <div className="w-full md:w-1/3 flex flex-col gap-4 shrink-0 md:shrink md:overflow-y-auto custom-scroll pr-2 relative">
           {metaLoading && (
             <div className="p-4 bg-orange-50 text-orange-600 rounded-2xl animate-pulse text-sm font-bold border border-orange-200">
               🔍 AI 正在翻譯與整理重點單字...
@@ -411,18 +411,10 @@ ${content}`;
 
           {metaData && (
             <div className="animate-popup-fade flex flex-col gap-4">
-              {/* Original Content Reference */}
-              <div>
-                <h3 className="font-bold text-stone-700 mb-2 font-chn border-l-4 border-stone-400 pl-2">外文原文 (Source)</h3>
-                <div className="bg-stone-50 p-4 rounded-2xl text-sm leading-relaxed text-stone-500 font-eng italic border border-stone-100 italic">
-                  {content}
-                </div>
-              </div>
-
               {/* Translation */}
               <div>
                 <h3 className="font-bold text-stone-700 mb-2 font-chn border-l-4 border-emerald-500 pl-2 flex items-center justify-between">
-                  全文翻譯 (Translation)
+                  全文翻譯（繁體中文）
                   <button
                     onClick={() => {
                       window.speechSynthesis.cancel();
