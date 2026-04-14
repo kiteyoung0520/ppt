@@ -10,7 +10,7 @@ const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecogni
 const TranslatorView = () => {
   const { currentLang, speechRate } = useSettings();
   const { apiKey } = useAuth();
-  const { recordActivity } = useGame();
+  const { recordActivity, addEssence } = useGame();
   
   // Directions: 'native' (Chinese -> Target), 'target' (Target -> Chinese)
   const [activeDirection, setActiveDirection] = useState(null); 
@@ -57,6 +57,7 @@ const TranslatorView = () => {
       
       if (fullResult) {
         speakTranslation(fullResult, dir);
+        addEssence('rain', 10);
       }
     } catch (e) {
       toast("口譯錯誤: " + e.message);

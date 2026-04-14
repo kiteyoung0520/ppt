@@ -166,7 +166,7 @@ const PronunciationPanel = ({ result, targetPhrase, onResend, onRetry, onDismiss
 const EchoValleyView = () => {
   const { currentLang, speechRate } = useSettings();
   const { apiKey } = useAuth();
-  const { recordActivity } = useGame();
+  const { recordActivity, addEssence } = useGame();
 
   const [activeSituation, setActiveSituation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -302,6 +302,7 @@ Rules:
       
       const result = safeParseJSON(rawText);
       setPronunciationResult(result);
+      addEssence('rain', 15);
     } catch (e) {
       toast('發音分析失敗：' + e.message);
       commitSuggestion(practiceTarget);

@@ -5,26 +5,17 @@ import { callApi } from '../services/api';
 const SRS_INTERVALS = [1, 3, 7, 14, 30, 60];
 
 export const NATIVE_PLANT_DB = [
-  { name: "黃花風鈴木", rarity: "Starter", emoji: "🌼", costToMax: 500 },
-  { name: "馬鞍藤", rarity: "N", emoji: "🌱", costToMax: 100 },
-  { name: "紫金牛", rarity: "N", emoji: "🌿", costToMax: 100 },
-  { name: "台灣欒樹", rarity: "R", emoji: "🌳", costToMax: 300 },
-  { name: "山櫻花", rarity: "R", emoji: "🌸", costToMax: 300 },
-  { name: "台灣百合", rarity: "R", emoji: "💮", costToMax: 300 },
-  { name: "水筆仔", rarity: "SR", emoji: "🎋", costToMax: 500 },
-  { name: "愛玉子", rarity: "SR", emoji: "🍃", costToMax: 500 },
-  { name: "牛樟", rarity: "SSR", emoji: "🪵", costToMax: 1000 },
-  { name: "台灣肖楠", rarity: "SSR", emoji: "🌲", costToMax: 1000 },
-  { name: "姑婆芋", rarity: "N", emoji: "🐘", costToMax: 100 },
-  { name: "相思樹", rarity: "N", emoji: "🌳", costToMax: 100 },
-  { name: "玉山箭竹", rarity: "N", emoji: "🎋", costToMax: 100 },
-  { name: "阿里山龍膽", rarity: "R", emoji: "💠", costToMax: 300 },
-  { name: "台東火刺木", rarity: "R", emoji: "🍒", costToMax: 300 },
-  { name: "台灣一葉蘭", rarity: "SR", emoji: "🌺", costToMax: 600 },
-  { name: "玉山薄雪草", rarity: "SR", emoji: "❄️", costToMax: 600 },
-  { name: "台灣水韭", rarity: "SR", emoji: "🌾", costToMax: 600 },
-  { name: "紅檜", rarity: "SSR", emoji: "🌲", costToMax: 1000 },
-  { name: "玉山圓柏", rarity: "SSR", emoji: "🌳", costToMax: 1000 }
+  { name: "黃花風鈴木", rarity: "Starter", emoji: "🌼", costToMax: 500, trait: "黃金光環", description: "增加初期獲得日光精華的速度 +20%", bonusType: "light_boost" },
+  { name: "馬鞍藤", rarity: "N", emoji: "🌱", costToMax: 100, trait: "海濱韌性", description: "在極端環境下也能生長，減少雨露消耗 10%", bonusType: "rain_save" },
+  { name: "紫金牛", rarity: "N", emoji: "🌿", costToMax: 100, trait: "林下之眼", description: "單字本複習獲得土壤精華 +5", bonusType: "soil_boost" },
+  { name: "台灣欒樹", rarity: "R", emoji: "🌳", costToMax: 300, trait: "四季變幻", description: "隨著季節更迭，隨機獲得一種精華補給", bonusType: "random_essence" },
+  { name: "山櫻花", rarity: "R", emoji: "🌸", costToMax: 300, trait: "春之報喜", description: "閱讀室分析完成後回饋更多金幣", bonusType: "coin_boost" },
+  { name: "台灣百合", rarity: "R", emoji: "💮", costToMax: 300, trait: "高山記憶", description: "提升 SRS 記憶演算法的精準度", bonusType: "srs_buff" },
+  { name: "水筆仔", rarity: "SR", emoji: "🎋", costToMax: 500, trait: "濕地守護", description: "自動修復一次學習漏接，保留連勝", bonusType: "streak_shield" },
+  { name: "愛玉子", rarity: "SR", emoji: "🍃", costToMax: 500, trait: "凝膠記憶", description: "暫時鎖定單字本，防止記憶衰退", bonusType: "vocab_lock" },
+  { name: "牛樟", rarity: "SSR", emoji: "🪵", costToMax: 1000, trait: "森林王者", description: "全屬性精華獲取速度提升 15%", bonusType: "all_boost" },
+  { name: "台灣肖楠", rarity: "SSR", emoji: "🌲", costToMax: 1000, trait: "神木之光", description: "即使不學習，每日也會自動產生微量精華", bonusType: "passive_gain" },
+  { name: "紅檜", rarity: "SSR", emoji: "🌲", costToMax: 1000, trait: "千年智慧", description: "解鎖高級 AI 模型使用權權（模擬）", bonusType: "ai_unlock" }
 ];
 
 export const useGameStore = create(
@@ -37,11 +28,48 @@ export const useGameStore = create(
         plantStage: 0,
         currentPlant: '黃花風鈴木',
         unlockedPlants: [],
-        expiryDate: null
+        expiryDate: null,
+        // New Essence System
+        essence: {
+          light: 0,  // From ReadingRoom
+          rain: 0,   // From Translator/EchoValley
+          soil: 0    // From VocabBook
+        }
       },
       streak: 0,
       lastStudyDate: null,
-      savedWords: [], // Each word: { word, pronunciation, meaning, langKey, nextReview, ... }
+      savedWords: [], 
+
+      // --- Actions: Essence ---
+      addEssence: (type, amount) => {
+        set((state) => ({
+          stats: {
+            ...state.stats,
+            essence: {
+              ...state.stats.essence,
+              [type]: state.stats.essence[type] + amount
+            }
+          }
+        }));
+      },
+
+      // --- Actions: Growth ---
+      evolvePlant: (cost) => {
+        const { stats } = get();
+        // Now requires both coins and light essence to reflect the "Guardian" logic
+        if (stats.coins >= cost && stats.essence.light >= (cost / 10)) {
+          set((state) => ({
+            stats: {
+              ...state.stats,
+              coins: state.stats.coins - cost,
+              essence: { ...state.stats.essence, light: state.stats.essence.light - (cost / 10) },
+              plantStage: state.stats.plantStage + 1
+            }
+          }));
+          return true;
+        }
+        return false;
+      },
 
       // --- Actions: Migration ---
       migrateLegacyData: () => {
@@ -59,7 +87,6 @@ export const useGameStore = create(
             if (legacyStreak) set({ streak: parseInt(legacyStreak) });
             if (legacyLastStudy) set({ lastStudyDate: legacyLastStudy });
 
-            // Clear legacy keys after migration
             localStorage.removeItem('flg_vocab');
             localStorage.removeItem('flg_streak');
             localStorage.removeItem('flg_lastStudy');
@@ -86,7 +113,7 @@ export const useGameStore = create(
         }
       },
 
-      // --- Actions: Streak ---
+      // --- Actions: Streak (Keep logic same) ---
       recordActivity: () => {
         const today = new Date().toDateString();
         const yesterday = new Date(Date.now() - 86400000).toDateString();
@@ -101,10 +128,9 @@ export const useGameStore = create(
         });
       },
 
-      // --- Actions: Vocabulary (SRS) ---
+      // --- Actions: Vocabulary ---
       saveWord: (wordData) => {
-        const { savedWords, recordActivity } = get();
-        // Prevent duplicate
+        const { savedWords, recordActivity, addEssence } = get();
         if (savedWords.find(w => w.word === wordData.word && w.langKey === wordData.langKey)) return;
 
         const newWord = {
@@ -121,11 +147,12 @@ export const useGameStore = create(
         };
 
         set({ savedWords: [newWord, ...savedWords] });
+        addEssence('soil', 5); // Learning new word adds soil essence
         recordActivity();
       },
 
       updateWordReview: (word, langKey, remembered) => {
-        const { savedWords } = get();
+        const { savedWords, addEssence } = get();
         const updated = savedWords.map(w => {
           if (w.word !== word || w.langKey !== langKey) return w;
           
@@ -133,11 +160,13 @@ export const useGameStore = create(
           const nextIdx = remembered ? Math.min(curIdx + 1, SRS_INTERVALS.length - 1) : 0;
           const newInterval = SRS_INTERVALS[nextIdx];
           
+          if (remembered) addEssence('soil', 10); // Reviewing correctly adds more soil
+
           return {
             ...w,
             reviewCount: w.reviewCount + 1,
             intervalDays: newInterval,
-            nextReview: Date.now() + (remembered ? newInterval * 86400000 : 0) // Reset to immediate if forgotten
+            nextReview: Date.now() + (remembered ? newInterval * 86400000 : 0)
           };
         });
         set({ savedWords: updated });
@@ -149,9 +178,8 @@ export const useGameStore = create(
         });
       },
 
-      // Reset everything (for logout)
       resetGameStore: () => set({
-        stats: { coins: 0, exp: 0, plantStage: 0, currentPlant: '黃花風鈴木', unlockedPlants: [], expiryDate: null },
+        stats: { coins: 0, exp: 0, plantStage: 0, currentPlant: '黃花風鈴木', unlockedPlants: [], expiryDate: null, essence: {light:0, rain:0, soil:0} },
         streak: 0,
         lastStudyDate: null,
         savedWords: []

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useSettings } from '../../../context/SettingsContext';
+import { useGame, NATIVE_PLANT_DB } from '../../../context/GameContext';
 import { toast } from '../../ui/Toast';
 
 const NurseryView = ({ onStartReading }) => {
@@ -57,10 +58,19 @@ Output ONLY the article text. Do not use Markdown headings or formatting. Pure t
 
         <button 
           onClick={handleStart}
-          className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl shadow-[0_5px_15px_-3px_rgba(5,150,105,0.4)] transition-transform active:scale-95 flex justify-center items-center gap-2"
+          className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl shadow-[0_5px_15px_-3px_rgba(5,150,105,0.4)] transition-transform active:scale-95 flex justify-center items-center gap-2 mb-4"
         >
            <span>🪄 開始培育文章</span>
         </button>
+
+        {/* Current Guardian Trait */}
+        <div className="bg-orange-50/80 border border-orange-200 rounded-2xl p-3 flex items-center gap-3 animate-fadeIn">
+          <div className="text-2xl">{currentPlantInfo.emoji}</div>
+          <div>
+            <div className="text-[10px] font-bold text-orange-400 uppercase tracking-widest">目前守護靈：{currentPlantInfo.trait}</div>
+            <div className="text-xs text-stone-600 leading-tight">{currentPlantInfo.description}</div>
+          </div>
+        </div>
       </div>
     </div>
   );

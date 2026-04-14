@@ -48,7 +48,7 @@ const ClickableText = ({ text, langCode, onWordClick }) => {
 // `word` can be a single word OR a selected sentence
 const WordCard = ({ word, langCode, speechCode, apiKey, articleContent, targetLangKey, onClose }) => {
   const isSentence = word.trim().split(/\s+/).length > 3;
-  const { saveWord } = useGame();
+  const { saveWord, addEssence } = useGame();
   const [info, setInfo] = useState(null);
   const [saved, setSaved] = useState(false);
   const [deepAnalysis, setDeepAnalysis] = useState('');
@@ -237,7 +237,7 @@ ${articleContent.substring(0, 500)}`;
 // pastedContent: optional pre-filled text (bypasses Gemini streaming)
 const ReadingRoom = ({ taskTitle, prompt, pastedContent, targetLangKey, onClose }) => {
   const { apiKey } = useAuth();
-  const { recordActivity } = useGame();
+  const { recordActivity, addEssence } = useGame();
   const [content, setContent] = useState(pastedContent || '');
   const [isStreaming, setIsStreaming] = useState(!pastedContent);
   const [metaData, setMetaData] = useState(null);
@@ -315,6 +315,7 @@ ${content}`;
           let fullRes = '';
           for await (const chunk of metaStream) fullRes += chunk;
           setMetaData(safeParseJSON(fullRes));
+          addEssence('light', 20); // Reward for completing analysis
         } catch (e) {
           console.error('Meta parse error', e);
         } finally {

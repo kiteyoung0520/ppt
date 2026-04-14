@@ -119,6 +119,22 @@ const DashboardView = () => {
             >
               <span>🌞 <span>{stats.coins}</span></span>
             </button>
+
+            {/* NEW: Essence Indicators */}
+            <div className="flex items-center gap-1 bg-white/50 border border-stone-100 px-2 py-1 rounded-full shadow-inner ml-2">
+              <div className="flex items-center gap-0.5 px-1.5" title="日光精華 (來自閱讀分析)">
+                <span className="text-[10px]">✨</span>
+                <span className="text-[11px] font-bold text-orange-500">{stats.essence?.light || 0}</span>
+              </div>
+              <div className="flex items-center gap-0.5 px-1.5 border-l border-stone-200" title="雨露精華 (來自口說練習)">
+                <span className="text-[10px]">💧</span>
+                <span className="text-[11px] font-bold text-blue-500">{stats.essence?.rain || 0}</span>
+              </div>
+              <div className="flex items-center gap-0.5 px-1.5 border-l border-stone-200" title="土壤精華 (來自單字複習)">
+                <span className="text-[10px]">🌿</span>
+                <span className="text-[11px] font-bold text-emerald-600">{stats.essence?.soil || 0}</span>
+              </div>
+            </div>
           </div>
 
           <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
