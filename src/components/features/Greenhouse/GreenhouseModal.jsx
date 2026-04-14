@@ -14,16 +14,22 @@ const GreenhouseModal = ({ isOpen, onClose }) => {
   const [isRolling, setIsRolling] = useState(false);
 
   // Sync to Backend
-  const saveStatsToBackend = async (newCoins, newUnlocked) => {
+  const saveStatsToBackend = async (newCoins, newUnlocked, newExp) => {
     try {
-      await callApi('updateStats', {
-        userId: currentUser,
+      const updatedStatsObj = {
+        ...stats,
         coins: newCoins,
-        unlockedPlants: newUnlocked.join(','),
-        exp: stats.exp
+        exp: newExp,
+        unlockedPlants: Array.isArray(newUnlocked) ? newUnlocked.join(',') : newUnlocked
+      };
+
+      await callApi('saveUserStats', {
+        userId: currentUser,
+        stats: updatedStatsObj
       }, apiKey);
     } catch (e) {
-      toast("⚠️ 同步至伺服器失敗，請稍後再試。");
+      console.error("Backend sync failed:", e);
+      toast("⚠️ 同步至伺服器失敗，請確認網路或 API 設定。");
     }
   };
 
@@ -37,10 +43,7 @@ const GreenhouseModal = ({ isOpen, onClose }) => {
 
     // Simulated network/animation delay
     setTimeout(async () => {
-      // Pick random plant
       const pool = NATIVE_PLANT_DB.filter(p => p.rarity !== 'Starter');
-      
-      // Simple rarity drop rates: N: 55%, R: 30%, SR: 12%, SSR: 3%
       const rand = Math.random();
       let targetRarity = 'N';
       if (rand > 0.55 && rand <= 0.85) targetRarity = 'R';
@@ -56,18 +59,22 @@ const GreenhouseModal = ({ isOpen, onClose }) => {
       let newUnlocked = [...currentUnlocked];
       let isDuplicate = newUnlocked.includes(picked.name);
       
+      let newExp = stats.exp || 0;
       if (!isDuplicate) {
         newUnlocked.push(picked.name);
+      } else {
+        newExp += 50; // Duplicate compensation
       }
 
       const newCoins = stats.coins - 100;
 
-      // Optimistic UI Update
-      setStats(prev => ({
-        ...prev,
+      // Update Local State
+      setStats({
+        ...stats,
         coins: newCoins,
+        exp: newExp,
         unlockedPlants: newUnlocked
-      }));
+      });
 
       setGachaResult({
         plant: picked,
@@ -76,8 +83,8 @@ const GreenhouseModal = ({ isOpen, onClose }) => {
 
       setIsRolling(false);
       
-      // Save
-      await saveStatsToBackend(newCoins, newUnlocked);
+      // Save full results
+      await saveStatsToBackend(newCoins, newUnlocked, newExp);
 
     }, 1500);
   };
