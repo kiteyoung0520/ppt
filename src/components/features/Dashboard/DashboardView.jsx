@@ -85,17 +85,6 @@ const DashboardView = () => {
 
   return (
     <div className="w-full min-h-[100dvh] bg-forest-gradient relative flex items-center justify-center p-0 lg:p-6 overflow-hidden">
-      {/* Background Particles (Fireflies) */}
-      {[...Array(20)].map((_, i) => (
-        <div key={i} className="firefly" style={{
-          left: `${Math.random() * 100}%`,
-          top: `${Math.random() * 100}%`,
-          '--tw-translate-x': `${(Math.random() - 0.5) * 400}px`,
-          '--tw-translate-y': `${(Math.random() - 0.5) * 400}px`,
-          animationDelay: `${Math.random() * 10}s`
-        }}></div>
-      ))}
-
       <GreenhouseModal isOpen={isGreenhouseOpen} onClose={() => setIsGreenhouseOpen(false)} />
 
       <div className={`
