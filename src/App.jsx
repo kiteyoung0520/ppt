@@ -9,7 +9,18 @@ import Toast from './components/ui/Toast';
 const MainApp = () => {
   const { currentUser, loading } = useAuth();
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div className="w-full h-full text-white bg-[#020817] flex flex-col items-center justify-center font-chn relative overflow-hidden">
+         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(16,185,129,0.1)_0%,_transparent_60%)] pointer-events-none"></div>
+         <div className="text-7xl mb-6 drop-shadow-[0_0_20px_rgba(16,185,129,0.5)] animate-pulse">🌳</div>
+         <div className="flex items-center gap-3 text-emerald-400 font-bold uppercase tracking-[0.3em] text-sm mt-4">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            <span>Link Start...</span>
+         </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full text-stone-800">

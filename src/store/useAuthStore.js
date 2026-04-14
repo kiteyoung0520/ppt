@@ -8,7 +8,7 @@ export const useAuthStore = create(
       currentUser: null,
       apiKey: null,
       deviceId: null,
-      isVerifying: false,
+      isVerifying: true,
 
       getDeviceId: () => {
         let devId = get().deviceId;
