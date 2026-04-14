@@ -22,6 +22,13 @@ const WorldTreeView = ({ onSendToSpecimen }) => {
   const [activeEvent, setActiveEvent] = useState(null);
   const [answerResult, setAnswerResult] = useState(null);
 
+  // Gacha Summoning States
+  const [summonConfirmPlant, setSummonConfirmPlant] = useState(null);
+  const [isSummoning, setIsSummoning] = useState(false);
+  const [summoningPlant, setSummoningPlant] = useState(null);
+
+  const { stats, addEssence, setStats, unlockPlant } = useGame();
+  
   const regions = [...new Set(NATIVE_PLANT_DB.map(p => p.region))];
   const unlockedArr = Array.isArray(stats.unlockedPlants) ? stats.unlockedPlants : [];
   
@@ -78,9 +85,33 @@ const WorldTreeView = ({ onSendToSpecimen }) => {
   };
 
   const handlePlantClick = (p) => {
+    const isUnlocked = unlockedArr.includes(p.name) || p.rarity === 'Starter';
+    if (!isUnlocked) {
+      setSummonConfirmPlant(p);
+      return;
+    }
     setSelectedPlant(p);
     setWisdomLeaf(null);
     setMobileLoreView(true); // Switch to Lore view on mobile
+  };
+
+  const confirmSummon = (plant) => {
+    if (unlockPlant(plant.name, plant.costToMax)) {
+      setSummonConfirmPlant(null);
+      setIsSummoning(true);
+      setSummoningPlant(plant);
+      
+      // Play dramatic 3-second summon animation before revealing
+      setTimeout(() => {
+        setIsSummoning(false);
+        setSummoningPlant(null);
+        setSelectedPlant(plant);
+        setMobileLoreView(true);
+        toast(`✨ 成功喚醒 ${plant.rarity} 級守護靈：${plant.name}！`);
+      }, 3000);
+    } else {
+       toast("❌ 靈氣精華不足，無法喚醒！請進行單字測驗或探險來收集。");
+    }
   };
 
   const fetchWisdomLeaf = async () => {
@@ -127,6 +158,58 @@ const WorldTreeView = ({ onSendToSpecimen }) => {
         </div>
       </div>
 
+      {/* ── 抽卡召喚動畫層 (Summon Animation) ───────────────── */}
+      {isSummoning && summoningPlant && (
+        <div className="fixed inset-0 z-[200] bg-black flex flex-col items-center justify-center overflow-hidden">
+           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(16,185,129,0.3)_0%,_transparent_70%)] animate-pulse-slow"></div>
+           {/* 魔法陣旋轉 */}
+           <div className="w-64 h-64 border-[4px] border-dashed border-emerald-500/50 rounded-full animate-spin flex items-center justify-center">
+              <div className="w-48 h-48 border-[2px] border-emerald-400 rounded-full animate-reverse-spin"></div>
+           </div>
+           
+           <div className="absolute flex items-center justify-center animate-ping">
+              <span className="text-white text-2xl font-black tracking-[1em] ml-[1em]">喚醒中</span>
+           </div>
+
+           {/* 爆發耀光 (模擬最後揭曉前的高潮) */}
+           <div className="absolute inset-0 bg-white opacity-0 animate-[flash_3s_ease-in-out_forwards] pointer-events-none"></div>
+        </div>
+      )}
+
+      {/* ── 召喚確認彈窗 ─────────────────────────────────────── */}
+      {summonConfirmPlant && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-stone-900 border-2 border-emerald-500/50 p-8 rounded-[3rem] max-w-sm w-full text-center relative shadow-2xl">
+            <div className="text-5xl mb-4 grayscale opacity-50">{summonConfirmPlant.emoji}</div>
+            <h3 className="text-xl font-black text-white mb-2">未知的守護靈</h3>
+            <p className="text-stone-400 text-xs mb-6 px-4">
+               此區域蘊藏著強大的靈力。是否消耗精華來嘗試喚醒？
+            </p>
+            
+            <div className="bg-black/50 p-4 rounded-3xl mb-6">
+               <div className="text-[10px] font-black text-emerald-500 tracking-widest uppercase mb-2">Required Essence</div>
+               <div className="text-xl font-bold text-white mb-1">{summonConfirmPlant.costToMax}</div>
+               <div className="text-[10px] text-stone-500">目前總合: {(stats?.essence?.light||0) + (stats?.essence?.rain||0) + (stats?.essence?.soil||0)}</div>
+            </div>
+
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setSummonConfirmPlant(null)}
+                className="flex-1 py-3.5 rounded-2xl bg-white/5 text-stone-400 font-bold text-sm"
+              >
+                取消
+              </button>
+              <button 
+                onClick={() => confirmSummon(summonConfirmPlant)}
+                className="flex-[2] py-3.5 rounded-2xl bg-emerald-600 text-white font-black text-sm uppercase shadow-[0_0_20px_rgba(16,185,129,0.3)] active:scale-95 transition-all"
+              >
+                注入靈氣喚醒
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── 主互動區塊 ─────────────────────────────────────── */}
       <div className="flex-1 flex flex-col min-h-0 relative">
         
@@ -152,36 +235,41 @@ const WorldTreeView = ({ onSendToSpecimen }) => {
               return (
                 <div
                   key={p.name}
-                  onClick={() => isUnlocked && handlePlantClick(p)}
+                  onClick={() => handlePlantClick(p)}
                   className={`
                     shrink-0 w-64 h-80 sm:w-80 sm:h-[400px] snap-center rounded-[3rem] border-2 flex flex-col items-center justify-center gap-6 relative transition-all active:scale-95 shadow-2xl
-                    lg:w-full lg:h-auto lg:aspect-square
+                    lg:w-full lg:h-auto lg:aspect-square cursor-pointer
                     ${isUnlocked 
                       ? 'bg-gradient-to-br from-stone-900 to-black border-emerald-500/30' 
-                      : 'bg-black opacity-30 border-white/5 grayscale'}
+                      : 'bg-black border-dashed border-white/20 hover:border-emerald-500/50'}
                   `}
                 >
                   {isUnlocked && (
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(16,185,129,0.1)_0%,_transparent_70%)] pointer-events-none"></div>
                   )}
                   
-                  <div className={`text-7xl sm:text-8xl drop-shadow-2xl transition-transform ${isUnlocked ? 'group-hover:scale-110' : ''}`}>
-                    {isUnlocked ? p.emoji : '🔒'}
+                  <div className={`text-7xl sm:text-8xl drop-shadow-2xl transition-transform ${isUnlocked ? 'group-hover:scale-110' : 'grayscale opacity-30 blur-sm group-hover:blur-none transition-all'}`}>
+                    {isUnlocked ? p.emoji : '❓'}
                   </div>
 
                   <div className="text-center px-4">
-                     <div className={`text-[9px] font-black uppercase tracking-[0.3em] mb-1 ${isUnlocked ? 'text-emerald-400' : 'text-stone-700'}`}>
-                        {p.rarity} Guardian
+                     <div className={`text-[9px] font-black uppercase tracking-[0.3em] mb-1 ${isUnlocked ? 'text-emerald-400' : 'text-stone-600'}`}>
+                        {isUnlocked ? p.rarity : 'Sealed'} Guardian
                      </div>
-                     <h3 className={`text-xl sm:text-2xl font-black ${isUnlocked ? 'text-white' : 'text-stone-800'}`}>
-                        {isUnlocked ? p.name : '神秘之影'}
+                     <h3 className={`text-xl sm:text-2xl font-black ${isUnlocked ? 'text-white' : 'text-stone-600'}`}>
+                        {isUnlocked ? p.name : '等待喚醒'}
                      </h3>
                   </div>
 
-                  {isUnlocked && (
+                  {isUnlocked ? (
                      <div className="absolute bottom-10 flex flex-col items-center group">
                         <div className="text-[8px] font-bold text-emerald-400/40 uppercase tracking-widest animate-pulse">View Lore</div>
                         <div className="w-1 h-4 bg-gradient-to-b from-emerald-500 to-transparent mt-2 rounded-full"></div>
+                     </div>
+                  ) : (
+                     <div className="absolute bottom-10 px-4 py-2 bg-white/5 border border-white/10 rounded-full text-[10px] font-bold text-stone-400 uppercase tracking-widest flex items-center gap-2">
+                        <span>🔒 Unlock</span>
+                        <span className="text-emerald-500 font-eng">{p.costToMax}</span>
                      </div>
                   )}
                 </div>
@@ -224,7 +312,8 @@ const WorldTreeView = ({ onSendToSpecimen }) => {
              <div className="flex-1 overflow-y-auto p-6 sm:p-10 scroll-smooth custom-scroll bg-gradient-to-b from-stone-900/50 to-black">
                 {selectedPlant ? (
                   <div className="animate-fadeIn max-w-2xl mx-auto">
-                     <div className="text-orange-400 text-xs font-bold italic mb-6 border-l-2 border-orange-400 pl-4">
+                     <div className="text-orange-400 text-xs font-bold italic mb-6 border-l-2 border-orange-400 pl-4 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse"></span>
                         {selectedPlant.trait}
                      </div>
                      <p className="text-emerald-50/90 text-[16px] sm:text-lg leading-relaxed whitespace-pre-wrap font-medium">
@@ -233,7 +322,7 @@ const WorldTreeView = ({ onSendToSpecimen }) => {
                      
                      <div className="mt-10 p-6 bg-emerald-500/5 border border-emerald-400/20 rounded-[2.5rem]">
                         <div className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-3">Guardian Benefit</div>
-                        <div className="text-sm text-white/70 leading-relaxed">{selectedPlant.description}</div>
+                        <div className="text-sm text-white/70 leading-relaxed font-chn">{selectedPlant.description}</div>
                      </div>
                   </div>
                 ) : wisdomLeaf ? (

@@ -104,7 +104,6 @@ export const useGameStore = create(
       evolvePlant: (cost) => {
         const { stats } = get();
         const light = stats?.essence?.light || 0;
-        // Now requires both coins and light essence to reflect the "Guardian" logic
         if (stats.coins >= cost && light >= (cost / 10)) {
           set((state) => {
             const currentEssence = state.stats?.essence || { light: 0, rain: 0, soil: 0 };
@@ -121,6 +120,44 @@ export const useGameStore = create(
         }
         return false;
       },
+
+      unlockPlant: (plantName, cost) => {
+        const { stats } = get();
+        const soil = stats?.essence?.soil || 0;
+        const rain = stats?.essence?.rain || 0;
+        const light = stats?.essence?.light || 0;
+        const totalEssence = soil + rain + light;
+        
+        if (totalEssence >= cost) {
+           set((state) => {
+              const currentUnlocks = Array.isArray(state.stats.unlockedPlants) ? state.stats.unlockedPlants : [];
+              if (currentUnlocks.includes(plantName)) return state;
+
+              // Deduct essence proportionally or just from highest (simple logic: take from what's available)
+              let remainingCost = cost;
+              let newSoil = soil, newRain = rain, newLight = light;
+              
+              if (newSoil >= remainingCost) { newSoil -= remainingCost; remainingCost = 0; }
+              else { remainingCost -= newSoil; newSoil = 0; }
+              
+              if (remainingCost > 0 && newRain >= remainingCost) { newRain -= remainingCost; remainingCost = 0; }
+              else if (remainingCost > 0) { remainingCost -= newRain; newRain = 0; }
+
+              if (remainingCost > 0 && newLight >= remainingCost) { newLight -= remainingCost; remainingCost = 0; }
+
+              return {
+                 stats: {
+                    ...state.stats,
+                    unlockedPlants: [...currentUnlocks, plantName],
+                    essence: { soil: newSoil, rain: newRain, light: newLight }
+                 }
+              };
+           });
+           return true;
+        }
+        return false;
+      },
+
 
       // --- Actions: Migration ---
       migrateLegacyData: () => {
