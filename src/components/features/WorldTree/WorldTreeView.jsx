@@ -99,30 +99,25 @@ const WorldTreeView = ({ onSendToSpecimen }) => {
   };
 
   return (
-    <div className="flex flex-col h-full w-full relative p-2 sm:p-4 overflow-hidden safe-top bg-[#020817]">
+    <div className="flex flex-col h-full w-full bg-[#020817] text-white relative overflow-hidden">
       
-      {/* ── Adventure Map HUD (Compact Header) ──────────────────── */}
-      <div className="flex flex-col sm:flex-row items-center gap-2 mb-4 sm:mb-8 shrink-0">
-        <div className="flex-1 w-full flex justify-between items-center px-2 sm:px-0">
-          <h2 className="text-xl sm:text-2xl font-black text-white font-chn flex items-center gap-2 drop-shadow-md">
-            🌍 {activeRegion}
-            {isRegionComplete && <span className="text-[10px] bg-amber-400 text-stone-900 px-2 py-0.5 rounded-full">MASTER</span>}
-          </h2>
-          <div className="flex gap-1 h-6 items-center">
-             {regions.map(r => (
-               <div key={r} className={`w-1.5 h-1.5 rounded-full ${activeRegion === r ? 'bg-emerald-400' : 'bg-white/10'}`}></div>
-             ))}
-          </div>
+      {/* ── Top Region Bar (Shrinkable) ─────────────────────────── */}
+      <div className="shrink-0 p-3 sm:p-6 bg-black/40 border-b border-white/5 z-20">
+        <div className="flex items-center justify-between mb-3">
+           <h2 className="text-xl font-black font-chn text-emerald-400">🌍 {activeRegion}</h2>
+           <div className="flex gap-1">
+              {regions.map(r => (
+                <div key={r} className={`w-1 h-1 rounded-full ${activeRegion === r ? 'bg-emerald-400' : 'bg-white/10'}`}></div>
+              ))}
+           </div>
         </div>
-        
-        {/* Region Switcher: Capsule Scroll */}
-        <div className="flex gap-1.5 bg-white/5 p-1 rounded-full border border-white/5 overflow-x-auto no-scrollbar w-full sm:w-auto">
+        <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
           {regions.map(r => (
             <button
               key={r}
               onClick={() => handleRegionChange(r)}
-              className={`px-4 py-1.5 rounded-full text-[10px] sm:text-[11px] font-black whitespace-nowrap transition-all ${
-                activeRegion === r ? 'bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.5)]' : 'text-emerald-100/30 hover:text-white'
+              className={`px-4 py-1.5 rounded-full text-[10px] sm:text-xs font-black whitespace-nowrap transition-all border ${
+                activeRegion === r ? 'bg-emerald-500 border-emerald-400 shadow-lg' : 'bg-white/5 border-white/5 text-stone-500'
               }`}
             >
               {r}
@@ -131,159 +126,121 @@ const WorldTreeView = ({ onSendToSpecimen }) => {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col lg:flex-row gap-6 min-h-0 relative">
+      <div className="flex-1 relative flex flex-col min-h-0">
         
         {/* ── Adventure Event Overlay ────────────────────────────── */}
         {activeEvent && !selectedPlant && !wisdomLeaf && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-black/90 backdrop-blur-xl rounded-[2rem] animate-fadeIn">
-            <div className="bg-stone-900 border border-emerald-500/30 p-8 rounded-[3rem] max-w-sm w-full shadow-2xl text-center relative overflow-hidden">
-               <div className="text-5xl mb-6">{activeEvent.type === 'challenge' ? '🛡️' : '✨'}</div>
-               <h3 className="text-xl font-black text-white mb-3 tracking-tighter">{activeEvent.type === 'challenge' ? '守護靈的試煉' : '森林的饋贈'}</h3>
-               <p className="text-emerald-100/60 text-sm mb-8 leading-relaxed px-4">{activeEvent.type === 'challenge' ? activeEvent.q : activeEvent.msg}</p>
-
+          <div className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-black/90 backdrop-blur-xl animate-fadeIn">
+            <div className="bg-stone-900 border border-emerald-500/30 p-8 rounded-[3rem] max-w-sm w-full shadow-2xl text-center">
+               <div className="text-5xl mb-4">{activeEvent.type === 'challenge' ? '🛡️' : '✨'}</div>
+               <h3 className="text-xl font-bold mb-2">{activeEvent.type === 'challenge' ? '試煉' : '饋贈'}</h3>
+               <p className="text-white/60 text-sm mb-8 leading-relaxed">{activeEvent.type === 'challenge' ? activeEvent.q : activeEvent.msg}</p>
                {activeEvent.type === 'challenge' && !answerResult && (
                  <div className="flex flex-col gap-2">
                     {activeEvent.options.map(opt => (
-                      <button key={opt} onClick={() => handleAnswer(opt)} className="w-full py-3.5 rounded-2xl bg-white/5 border border-white/10 text-white text-sm font-bold active:bg-emerald-500 transition-all">{opt}</button>
+                      <button key={opt} onClick={() => handleAnswer(opt)} className="w-full py-3.5 rounded-2xl bg-white/5 border border-white/10 text-white text-sm font-bold">{opt}</button>
                     ))}
                  </div>
                )}
-
                {(activeEvent.type === 'blessing' || answerResult) && (
-                 <button onClick={() => setActiveEvent(null)} className="w-full py-4 rounded-2xl bg-emerald-600 text-white font-black text-xs uppercase tracking-[0.2em] mt-2">繼續探險</button>
+                 <button onClick={() => setActiveEvent(null)} className="w-full py-4 rounded-full bg-emerald-600 font-black text-xs uppercase tracking-widest mt-2">繼續探險</button>
                )}
             </div>
           </div>
         )}
         
-        {/* ── Mobile Carousel / Desktop Grid ─────────────────────── */}
-        <div className={`
-          flex-1 min-h-0 flex flex-col gap-4
-          ${mobileLoreView ? 'hidden lg:flex' : 'flex'}
-        `}>
+        {/* ── Main Interactive Content ─────────────────────────── */}
+        <div className="flex-1 flex flex-col lg:flex-row min-h-0">
            
-           {/* Mobile Hand-drawn Carousel Cards */}
-           <div className="flex-1 overflow-x-auto no-scrollbar snap-x snap-mandatory flex gap-4 px-8 items-center lg:grid lg:grid-cols-3 lg:snap-none lg:px-0 lg:overflow-y-auto">
-              {regionPlants.map(p => {
-                const isUnlocked = unlockedArr.includes(p.name) || p.rarity === 'Starter';
-                return (
-                  <div
-                    key={p.name}
-                    onClick={() => isUnlocked && handlePlantClick(p)}
-                    className={`
-                      shrink-0 w-64 h-[24rem] sm:w-72 sm:h-[28rem] snap-center rounded-[3rem] border-2 transition-all p-8
-                      flex flex-col items-center justify-center gap-6 relative overflow-hidden group active:scale-95
-                      lg:w-full lg:h-auto lg:aspect-square lg:p-4 lg:rounded-3xl
-                      ${isUnlocked 
-                        ? 'bg-gradient-to-b from-white/10 to-white/5 border-emerald-400/30' 
-                        : 'bg-black/40 border-white/5 opacity-50 grayscale'}
-                    `}
-                  >
-                     {/* Card Pattern */}
-                     <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
-                     <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-500/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl"></div>
+           {/* Card Slider (Mobile) / Grid (Desktop) */}
+           <div className={`
+              flex-1 flex flex-col p-4 sm:p-8 min-h-0
+              ${mobileLoreView ? 'hidden lg:flex' : 'flex'}
+           `}>
+              <div className="flex-1 overflow-x-auto overflow-y-hidden no-scrollbar flex items-center gap-6 px-4 touch-pan-x lg:grid lg:grid-cols-3 lg:overflow-y-auto lg:px-0">
+                {regionPlants.map(p => {
+                  const isUnlocked = unlockedArr.includes(p.name) || p.rarity === 'Starter';
+                  return (
+                    <div
+                      key={p.name}
+                      onClick={() => isUnlocked && handlePlantClick(p)}
+                      className={`
+                        shrink-0 w-64 h-80 sm:w-80 sm:h-96 rounded-[2.5rem] border-2 flex flex-col items-center justify-center gap-6 relative transition-transform active:scale-95 lg:w-full lg:h-auto lg:aspect-square
+                        ${isUnlocked ? 'bg-white/5 border-emerald-400/30' : 'bg-black/40 border-white/5 opacity-40 grayscale'}
+                      `}
+                    >
+                      <div className="text-7xl drop-shadow-2xl">{isUnlocked ? p.emoji : '🔒'}</div>
+                      <div className="text-center">
+                         <div className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">{p.rarity}</div>
+                         <h3 className="text-xl font-black">{isUnlocked ? p.name : 'Unknown'}</h3>
+                      </div>
+                      <div className="absolute bottom-6 text-[8px] font-bold text-white/20 uppercase tracking-[0.3em] lg:hidden">Touch to view lore</div>
+                    </div>
+                  );
+                })}
+              </div>
 
-                     <div className={`text-7xl sm:text-8xl transition-all duration-700 ${isUnlocked ? 'group-hover:scale-110 drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]' : 'opacity-40'}`}>
-                        {isUnlocked ? p.emoji : '🔒'}
-                     </div>
-
-                     <div className="text-center">
-                        <div className={`text-[10px] font-black uppercase tracking-[0.3em] mb-1 ${isUnlocked ? 'text-emerald-400' : 'text-stone-600'}`}>
-                           {p.rarity} Guardian
-                        </div>
-                        <h3 className={`text-2xl font-black font-chn ${isUnlocked ? 'text-white' : 'text-stone-700'}`}>
-                           {isUnlocked ? p.name : '神秘之影'}
-                        </h3>
-                     </div>
-
-                     {isUnlocked && (
-                       <div className="mt-4 flex items-center gap-2 bg-emerald-400/10 border border-emerald-400/20 px-4 py-2 rounded-full">
-                          <span className="text-[10px] font-black text-emerald-300">靈氣覺醒</span>
-                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div>
-                       </div>
-                     )}
-
-                     <div className="absolute bottom-6 text-[9px] font-bold text-white/20 uppercase tracking-widest lg:hidden">
-                        點擊查看故事
-                     </div>
-                  </div>
-                );
-              })}
+              <button
+                onClick={fetchWisdomLeaf}
+                disabled={isLeafLoading}
+                className="mt-6 w-full py-4 rounded-2xl bg-indigo-600 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-500/20 active:scale-95 transition-all"
+              >
+                {isLeafLoading ? 'Loading Wisdom...' : '🍃 摘取智慧之葉'}
+              </button>
            </div>
 
-           <button
-             onClick={fetchWisdomLeaf}
-             disabled={isLeafLoading}
-             className="w-full py-4 shrink-0 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black text-[10px] uppercase tracking-[0.3em] shadow-[0_10px_30px_rgba(16,185,129,0.3)] flex items-center justify-center gap-3 transition-all active:scale-95"
-           >
-              {isLeafLoading ? '🍃 ...' : '🍃 摘取智慧之葉'}
-           </button>
-        </div>
+           {/* Story Display (Full-screen Mobile) */}
+           <div className={`
+              flex-1 flex flex-col min-h-0 p-4 sm:p-8
+              ${mobileLoreView ? 'flex' : 'hidden lg:flex'}
+           `}>
+              <div className="flex-1 bg-stone-900 border border-white/10 rounded-[2.5rem] p-6 sm:p-10 flex flex-col relative overflow-hidden">
+                <button 
+                  onClick={() => setMobileLoreView(false)}
+                  className="lg:hidden absolute top-4 right-4 w-10 h-10 flex items-center justify-center bg-white/5 border border-white/10 rounded-full text-white z-30"
+                >
+                  ✕
+                </button>
 
-        {/* ── Right Side: Lore (Genshin Style Details) ──────────────── */}
-        <div className={`
-          flex-1 min-h-0 lg:w-1/2
-          ${mobileLoreView ? 'flex' : 'hidden lg:flex'}
-        `}>
-          <div className="flex-1 bg-gradient-to-b from-stone-900 to-black border border-white/10 rounded-[3rem] p-8 flex flex-col relative overflow-hidden shadow-2xl">
-            
-            <button 
-              onClick={() => setMobileLoreView(false)}
-              className="lg:hidden absolute top-6 right-6 w-12 h-12 flex items-center justify-center bg-white/5 border border-white/10 rounded-full text-white z-20"
-            >
-              ✕
-            </button>
-
-            <div className="flex-1 overflow-y-auto pr-2 custom-scroll">
-              {selectedPlant ? (
-                <div className="animate-fadeIn">
-                  <div className="flex items-center gap-6 mb-8">
-                     <div className="text-6xl sm:text-7xl drop-shadow-2xl">{selectedPlant.emoji}</div>
-                     <div>
-                        <div className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.4em] mb-1">Record No. 712</div>
-                        <h3 className="text-2xl sm:text-4xl font-black text-white font-chn">{selectedPlant.name}</h3>
-                        <div className="text-xs font-bold text-orange-400/80 mt-2 italic flex items-center gap-2">
-                           <span className="w-2 h-2 rounded-full bg-orange-400"></span>
-                           {selectedPlant.trait}
-                        </div>
-                     </div>
-                  </div>
-
-                  <div className="bg-white/5 backdrop-blur-md rounded-[2rem] p-6 sm:p-8 border border-white/5">
-                    <p className="text-emerald-50/90 text-sm sm:text-lg leading-relaxed font-chn whitespace-pre-wrap">
-                       {selectedPlant.story}
-                    </p>
-                  </div>
-
-                  <div className="mt-8 grid grid-cols-1 gap-4">
-                     <div className="bg-emerald-400/5 border border-emerald-400/20 rounded-2xl p-5">
-                        <div className="text-[10px] font-black text-emerald-400 uppercase mb-2 tracking-widest">守護特質 (Trait)</div>
-                        <div className="text-xs sm:text-sm text-white/80 leading-relaxed font-chn">{selectedPlant.description}</div>
-                     </div>
-                  </div>
-                </div>
-              ) : wisdomLeaf ? (
-                <div className="animate-popup-fade flex flex-col h-full items-center justify-center text-center">
-                  <div className="text-[60px] text-violet-500/30 font-serif leading-none mb-4">“</div>
-                  <div className="font-eng text-xl sm:text-4xl text-white font-black leading-tight mb-6 italic px-4">
-                    {wisdomLeaf.eng}
-                  </div>
-                  <div className="text-xs font-bold text-stone-500 mb-8 tracking-[0.3em]">— {wisdomLeaf.author} —</div>
-                  <div className="bg-white/5 rounded-3xl p-6 sm:p-8 border border-white/5 font-chn text-base sm:text-xl text-emerald-100/80 w-full">
-                    {wisdomLeaf.chn}
-                  </div>
-                  {onSendToSpecimen && (
-                    <button onClick={() => onSendToSpecimen(wisdomLeaf.eng)} className="mt-8 py-4 px-10 bg-violet-600 text-white font-black text-[10px] rounded-full tracking-[0.2em] uppercase shadow-lg shadow-violet-500/20 active:scale-95 transition-all">傳送至標本室</button>
+                <div className="flex-1 overflow-y-auto no-scrollbar">
+                  {selectedPlant ? (
+                    <div className="animate-fadeIn">
+                       <div className="flex items-center gap-4 mb-6">
+                         <div className="text-5xl">{selectedPlant.emoji}</div>
+                         <div>
+                            <h3 className="text-2xl font-black">{selectedPlant.name}</h3>
+                            <div className="text-xs text-orange-400 mt-1 italic">{selectedPlant.trait}</div>
+                         </div>
+                       </div>
+                       <div className="h-[1px] bg-white/10 mb-6"></div>
+                       <p className="text-white/80 text-[15px] leading-relaxed font-chn">
+                          {selectedPlant.story}
+                       </p>
+                       <div className="mt-8 bg-emerald-500/10 border border-emerald-400/30 p-4 rounded-2xl">
+                          <div className="text-[9px] font-black text-emerald-400 mb-1 tracking-widest uppercase">Guardian Trait</div>
+                          <div className="text-xs text-white/70">{selectedPlant.description}</div>
+                       </div>
+                    </div>
+                  ) : wisdomLeaf ? (
+                    <div className="text-center py-8">
+                       <div className="text-4xl mb-6 text-indigo-400 italic">“</div>
+                       <p className="text-xl font-bold mb-4">{wisdomLeaf.eng}</p>
+                       <p className="text-stone-500 text-xs mb-8">— {wisdomLeaf.author}</p>
+                       <div className="bg-white/5 p-6 rounded-2xl text-emerald-100 text-sm">
+                          {wisdomLeaf.chn}
+                       </div>
+                       {onSendToSpecimen && (
+                         <button onClick={() => onSendToSpecimen(wisdomLeaf.eng)} className="mt-8 py-3 px-8 bg-indigo-500 rounded-full text-[10px] font-black uppercase tracking-widest">📤 Analyze</button>
+                       )}
+                    </div>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-center opacity-20">
+                       <p className="text-xs uppercase font-black tracking-widest">Select a Guardian</p>
+                    </div>
                   )}
                 </div>
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center text-center opacity-10">
-                   <div className="text-8xl mb-8">🎴</div>
-                   <div className="text-xs uppercase font-black tracking-[0.5em]">Card Details</div>
-                </div>
-              )}
-            </div>
-          </div>
+              </div>
+           </div>
         </div>
       </div>
     </div>
