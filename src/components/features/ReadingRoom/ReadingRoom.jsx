@@ -386,7 +386,7 @@ ${content}`;
           ref={scrollRef}
           onMouseUp={handleTextSelection}
           onTouchEnd={handleTextSelection}
-          className="flex-1 bg-white rounded-3xl shadow-sm p-6 overflow-y-auto custom-scroll text-lg leading-loose font-eng border border-stone-200 select-text"
+          className="flex-[1.5] bg-white rounded-3xl shadow-sm p-6 overflow-y-auto custom-scroll text-lg leading-loose font-eng border border-stone-200 select-text min-h-[40vh] md:min-h-0"
         >
           <div className="text-xs text-stone-400 mb-4 font-chn flex items-center gap-3">
             <span>💡 <strong>點擊單字</strong>查詢意思與發音</span>
@@ -411,10 +411,18 @@ ${content}`;
 
           {metaData && (
             <div className="animate-popup-fade flex flex-col gap-4">
+              {/* Original Content Reference */}
+              <div>
+                <h3 className="font-bold text-stone-700 mb-2 font-chn border-l-4 border-stone-400 pl-2">外文原文 (Source)</h3>
+                <div className="bg-stone-50 p-4 rounded-2xl text-sm leading-relaxed text-stone-500 font-eng italic border border-stone-100 italic">
+                  {content}
+                </div>
+              </div>
+
               {/* Translation */}
               <div>
                 <h3 className="font-bold text-stone-700 mb-2 font-chn border-l-4 border-emerald-500 pl-2 flex items-center justify-between">
-                  全文翻譯（繁體中文）
+                  全文翻譯 (Translation)
                   <button
                     onClick={() => {
                       window.speechSynthesis.cancel();
