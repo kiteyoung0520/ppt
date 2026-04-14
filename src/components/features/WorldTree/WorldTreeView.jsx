@@ -99,30 +99,29 @@ const WorldTreeView = ({ onSendToSpecimen }) => {
   };
 
   return (
-    <div className="flex flex-col h-full w-full relative p-2 sm:p-4 overflow-hidden safe-top">
+    <div className="flex flex-col h-full w-full relative p-2 sm:p-4 overflow-hidden safe-top bg-black/20">
       
-      {/* ── Adventure Map HUD (Compact on Landscape) ──────────────── */}
-      <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 mb-3 sm:mb-6 shrink-0">
+      {/* ── Adventure Map HUD (Extreme Compact for Mobile) ────────── */}
+      <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-4 mb-2 sm:mb-6 shrink-0">
         <div className="flex-1 w-full flex justify-between items-center sm:block">
-          <h2 className="text-lg sm:text-2xl font-black text-white font-chn drop-shadow-md">
+          {/* Hide title on short landscape screens */}
+          <h2 className="hidden xs:block sm:text-2xl font-black text-white font-chn drop-shadow-md">
             🌍 {isRegionComplete && '🏆 '}語林之境
           </h2>
-          <div className="sm:hidden">
+          <div className="xs:hidden font-black text-xs text-emerald-400">🌍 {activeRegion}</div>
+          <div className="hidden sm:block">
             {isRegionComplete && <span className="text-[10px] bg-amber-400 text-stone-900 px-2 py-0.5 rounded-full font-black">Region Master</span>}
           </div>
-          <p className="hidden sm:block text-emerald-100/60 text-xs font-medium tracking-widest uppercase">
-            {activeRegion} Guardian Scroll
-          </p>
         </div>
         
-        {/* Region Switcher (Scrollable on small screens) */}
-        <div className="flex gap-1 bg-black/30 p-1 rounded-2xl border border-white/10 overflow-x-auto no-scrollbar w-full sm:w-auto">
+        {/* Region Switcher (More compact for mobile/landscape) */}
+        <div className="flex gap-1 bg-black/40 p-1 rounded-xl border border-white/5 overflow-x-auto no-scrollbar w-full sm:w-auto">
           {regions.map(r => (
             <button
               key={r}
               onClick={() => handleRegionChange(r)}
-              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[10px] sm:text-[11px] font-black whitespace-nowrap transition-all ${
-                activeRegion === r ? 'bg-emerald-500 text-white shadow-lg' : 'text-emerald-100/40 hover:text-white'
+              className={`px-3 py-1 sm:py-2 rounded-lg text-[9px] sm:text-[11px] font-black whitespace-nowrap transition-all ${
+                activeRegion === r ? 'bg-emerald-500 text-white shadow-lg' : 'text-emerald-100/30 hover:text-white'
               }`}
             >
               {r}
@@ -131,37 +130,37 @@ const WorldTreeView = ({ onSendToSpecimen }) => {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col lg:flex-row gap-4 sm:gap-6 min-h-0 relative">
+      <div className="flex-1 flex flex-col lg:flex-row gap-2 sm:gap-6 min-h-0 relative">
         
         {/* ── Adventure Event Overlay ────────────────────────────── */}
         {activeEvent && !selectedPlant && !wisdomLeaf && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm rounded-[1.5rem] sm:rounded-[2.5rem] animate-fadeIn">
-            <div className="bg-stone-900 border-2 border-emerald-500/50 p-6 sm:p-8 rounded-[2rem] sm:rounded-[3rem] max-w-md w-full shadow-2xl text-center relative overflow-hidden">
-               <div className="text-4xl mb-4">{activeEvent.type === 'challenge' ? '🛡️' : '✨'}</div>
-               <h3 className="text-xl font-bold text-white mb-2">{activeEvent.type === 'challenge' ? '守護靈的試煉' : '森林的饋贈'}</h3>
-               <p className="text-emerald-100/80 text-sm mb-6 leading-relaxed">{activeEvent.type === 'challenge' ? activeEvent.q : activeEvent.msg}</p>
+          <div className="absolute inset-0 z-50 flex items-center justify-center p-2 bg-black/80 backdrop-blur-sm rounded-2xl animate-fadeIn">
+            <div className="bg-stone-900 border-2 border-emerald-500/50 p-4 sm:p-8 rounded-[2rem] max-w-sm w-full shadow-2xl text-center relative overflow-hidden">
+               <div className="text-3xl mb-2">{activeEvent.type === 'challenge' ? '🛡️' : '✨'}</div>
+               <h3 className="text-lg font-bold text-white mb-1">{activeEvent.type === 'challenge' ? '守護靈的試煉' : '森林的饋贈'}</h3>
+               <p className="text-emerald-100/80 text-xs mb-4 leading-relaxed">{activeEvent.type === 'challenge' ? activeEvent.q : activeEvent.msg}</p>
 
                {activeEvent.type === 'challenge' && !answerResult && (
-                 <div className="flex flex-col gap-2">
+                 <div className="flex flex-col gap-1.5">
                     {activeEvent.options.map(opt => (
-                      <button key={opt} onClick={() => handleAnswer(opt)} className="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-bold transition-all">{opt}</button>
+                      <button key={opt} onClick={() => handleAnswer(opt)} className="w-full py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-[11px] font-bold transition-all">{opt}</button>
                     ))}
                  </div>
                )}
 
                {(activeEvent.type === 'blessing' || answerResult) && (
-                 <button onClick={() => setActiveEvent(null)} className="w-full py-3 rounded-xl bg-emerald-600 text-white font-black text-xs uppercase tracking-widest mt-4">繼續冒險</button>
+                 <button onClick={() => setActiveEvent(null)} className="w-full py-2.5 rounded-lg bg-emerald-600 text-white font-black text-[10px] uppercase tracking-widest mt-2">繼續冒險</button>
                )}
             </div>
           </div>
         )}
         
-        {/* ── Left Side: Region Grid (Hidden on Lore view in Portrait) ────────────────────────── */}
+        {/* ── Left Side: Region Grid (Responsive height) ────────────── */}
         <div className={`
-          flex-1 lg:w-1/2 flex flex-col gap-4 min-h-0
+          flex-1 min-h-0 flex flex-col gap-2 
           ${mobileLoreView ? 'hidden lg:flex' : 'flex'}
         `}>
-           <div className="flex-1 grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-3 gap-3 sm:gap-4 overflow-y-auto no-scrollbar py-2">
+           <div className="flex-1 grid grid-cols-4 sm:grid-cols-3 lg:grid-cols-3 gap-2 sm:gap-4 overflow-y-auto no-scrollbar py-1">
               {regionPlants.map(p => {
                 const isUnlocked = unlockedArr.includes(p.name) || p.rarity === 'Starter';
                 return (
@@ -169,18 +168,16 @@ const WorldTreeView = ({ onSendToSpecimen }) => {
                     key={p.name}
                     onClick={() => isUnlocked && handlePlantClick(p)}
                     className={`
-                      relative aspect-square rounded-[1.5rem] sm:rounded-[2rem] border-2 transition-all p-3 sm:p-4
-                      flex flex-col items-center justify-center gap-1 sm:gap-2
+                      relative aspect-square rounded-xl sm:rounded-[2rem] border transition-all p-1 sm:p-4
+                      flex flex-col items-center justify-center gap-1
                       ${isUnlocked 
-                        ? 'bg-white/10 border-emerald-400/30 hover:bg-white/20 active:scale-95' 
-                        : 'bg-black/20 border-white/5 opacity-40 cursor-not-allowed'}
+                        ? 'bg-white/5 border-emerald-400/20 hover:bg-white/10 active:scale-95' 
+                        : 'bg-black/20 border-white/5 opacity-20 cursor-not-allowed'}
                     `}
                   >
-                    <div className={`text-2xl sm:text-4xl transition-transform ${isUnlocked ? 'group-hover:scale-110' : 'grayscale'}`}>
-                       {isUnlocked ? p.emoji : '🔒'}
-                    </div>
-                    <div className="text-[8px] sm:text-[10px] font-black text-white uppercase tracking-tighter truncate w-full text-center">
-                       {isUnlocked ? p.name : '遺失'}
+                    <div className="text-xl sm:text-4xl">{isUnlocked ? p.emoji : '🔒'}</div>
+                    <div className="text-[7px] sm:text-[10px] font-bold text-white/60 truncate w-full text-center">
+                       {isUnlocked ? p.name : ''}
                     </div>
                   </button>
                 );
@@ -190,67 +187,63 @@ const WorldTreeView = ({ onSendToSpecimen }) => {
            <button
              onClick={fetchWisdomLeaf}
              disabled={isLeafLoading}
-             className="w-full py-3 sm:py-4 mt-auto rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black text-[10px] sm:text-xs uppercase tracking-widest hover:opacity-90 active:scale-95 transition-all shadow-xl flex items-center justify-center gap-2"
+             className="w-full py-2.5 sm:py-4 shrink-0 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black text-[9px] sm:text-xs uppercase tracking-widest transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2"
            >
-              {isLeafLoading ? '🍃 祈願中...' : '🍃 摘取世界樹之葉'}
+              {isLeafLoading ? '🍃 ...' : '🍃 摘取世界樹之葉'}
            </button>
         </div>
 
-        {/* ── Right Side: Lore (Full-screen on PortraitLore) ─────────── */}
+        {/* ── Right Side: Lore (Responsive height) ────────────────── */}
         <div className={`
-          flex-1 lg:w-1/2 min-h-0
+          flex-1 min-h-0 lg:w-1/2
           ${mobileLoreView ? 'flex' : 'hidden lg:flex'}
         `}>
-          <div className="flex-1 bg-stone-900/60 border border-white/10 rounded-[1.5rem] sm:rounded-[2.5rem] p-5 sm:p-8 flex flex-col relative overflow-hidden backdrop-blur-md">
+          <div className="flex-1 bg-stone-900/40 border border-white/10 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-8 flex flex-col relative overflow-hidden backdrop-blur-md">
             
-            {/* Back button for mobile */}
             <button 
               onClick={() => setMobileLoreView(false)}
-              className="lg:hidden absolute top-4 right-4 w-10 h-10 flex items-center justify-center bg-white/10 rounded-full text-white z-20"
+              className="lg:hidden absolute top-2 right-2 w-8 h-8 flex items-center justify-center bg-white/10 rounded-full text-white z-20 text-xs"
             >
               ✕
             </button>
 
-            <div className="flex-1 overflow-y-auto custom-scroll pr-2">
+            <div className="flex-1 overflow-y-auto scrollbar-hide">
               {selectedPlant ? (
-                <div className="relative animate-fadeIn">
-                  <div className="text-emerald-400 font-black text-[9px] uppercase tracking-[0.3em] mb-3">Ancient Scroll</div>
-                  <div className="flex items-center gap-4 mb-4 sm:mb-6">
-                     <div className="text-5xl sm:text-6xl">{selectedPlant.emoji}</div>
+                <div className="animate-fadeIn">
+                  <div className="flex items-center gap-3 mb-3">
+                     <div className="text-4xl sm:text-6xl">{selectedPlant.emoji}</div>
                      <div>
-                        <h3 className="text-xl sm:text-3xl font-black text-white font-chn">{selectedPlant.name}</h3>
-                        <div className="text-[10px] sm:text-xs font-bold text-orange-300/80 mt-1 italic">{selectedPlant.trait}</div>
+                        <h3 className="text-lg sm:text-3xl font-black text-white">{selectedPlant.name}</h3>
+                        <div className="text-[9px] sm:text-xs text-orange-300 italic">{selectedPlant.trait}</div>
                      </div>
                   </div>
-                  <div className="h-[1px] w-full bg-gradient-to-r from-white/20 to-transparent mb-4 sm:mb-6"></div>
-                  <p className="text-emerald-50 text-sm sm:text-base leading-relaxed font-chn">
+                  <div className="h-[1px] w-full bg-white/10 mb-3"></div>
+                  <p className="text-emerald-100/90 text-[11px] sm:text-base leading-relaxed font-chn">
                      {selectedPlant.story}
                   </p>
-                  <div className="mt-6 sm:mt-8 bg-emerald-400/10 border border-emerald-400/30 rounded-2xl p-4">
-                     <div className="text-[8px] sm:text-[10px] font-black text-emerald-400 uppercase mb-1">能力加備 (Passive)</div>
-                     <div className="text-[11px] sm:text-xs text-white/80">{selectedPlant.description}</div>
+                  <div className="mt-4 bg-emerald-400/5 border border-emerald-400/20 rounded-xl p-3">
+                     <div className="text-[8px] sm:text-[10px] font-black text-emerald-400 mb-1 tracking-widest">HABITAT BENEFIT</div>
+                     <div className="text-[10px] sm:text-xs text-white/60">{selectedPlant.description}</div>
                   </div>
                 </div>
               ) : wisdomLeaf ? (
-                <div className="relative animate-popup-fade flex flex-col min-h-full">
-                  <div className="text-violet-400 font-black text-[9px] uppercase tracking-[0.3em] mb-4">Island Wisdom</div>
-                  <div className="text-[40px] text-violet-400 opacity-20 leading-none">❝</div>
-                  <div className="font-eng text-lg sm:text-2xl text-white font-bold leading-relaxed mb-4">
+                <div className="animate-popup-fade flex flex-col h-full">
+                  <div className="text-[30px] text-violet-400 opacity-20">❝</div>
+                  <div className="font-eng text-sm sm:text-2xl text-white font-bold mb-3 italic">
                     {wisdomLeaf.eng}
                   </div>
-                  <div className="text-[10px] font-eng text-stone-500 italic mb-4">— {wisdomLeaf.author} —</div>
-                  <div className="border-t border-dashed border-white/10 pt-4 font-chn text-base sm:text-lg text-emerald-100/90 whitespace-pre-wrap">
+                  <div className="text-[9px] font-eng text-stone-500 mb-4">— {wisdomLeaf.author}</div>
+                  <div className="border-t border-white/5 pt-3 font-chn text-xs sm:text-lg text-emerald-100/80">
                     {wisdomLeaf.chn}
                   </div>
                   {onSendToSpecimen && (
-                    <button onClick={() => onSendToSpecimen(wisdomLeaf.eng)} className="mt-6 py-3 bg-violet-600 hover:bg-violet-700 text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all active:scale-95">📤 分析內容</button>
+                    <button onClick={() => onSendToSpecimen(wisdomLeaf.eng)} className="mt-4 py-2.5 bg-violet-600 text-white font-black text-[9px] rounded-lg tracking-widest uppercase active:scale-95">📤 分析</button>
                   )}
                 </div>
               ) : (
-                <div className="h-full flex flex-col items-center justify-center text-center opacity-30 p-4">
-                   <div className="text-5xl mb-4">🧭</div>
-                   <h4 className="text-emerald-100 font-black uppercase text-[10px]">Explore the Formosa Map</h4>
-                   <p className="text-stone-400 text-[10px] mt-2">點擊解鎖的守護靈，觀看其在古卷中的傳說故事。</p>
+                <div className="h-full flex flex-col items-center justify-center text-center opacity-20 p-2">
+                   <div className="text-4xl mb-2">🔭</div>
+                   <div className="text-[9px] uppercase font-black">Select Guardian</div>
                 </div>
               )}
             </div>
