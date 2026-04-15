@@ -15,10 +15,9 @@ export const AuthProvider = ({ children }) => {
   const value = {
     currentUser: auth.currentUser,
     apiKey: auth.apiKey,
-    loading: auth.isVerifying,
+    loading: auth.isVerifying || !auth._hasHydrated,
     login: auth.login,
     logout: auth.logout,
-    // Add any others if needed
   };
 
   return (

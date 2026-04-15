@@ -18,6 +18,7 @@ import ForestTrialView from '../ForestTrial/ForestTrialView';
 // UI Overlays
 import OnboardingModal from '../../ui/OnboardingModal';
 import EssenceGuideModal from '../../ui/EssenceGuideModal';
+import FeatureHelpModal from '../../ui/FeatureHelpModal';
 
 // ── Language Switcher ─────────────────────────────────────────────
 const LANG_OPTIONS = [
@@ -198,6 +199,7 @@ const DashboardView = () => {
   const [isGreenhouseOpen, setIsGreenhouseOpen] = useState(false);
   const [specimenText, setSpecimenText] = useState('');
   const [showEssenceGuide, setShowEssenceGuide] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   // Onboarding: shown once per device
   const [showOnboarding, setShowOnboarding] = useState(
@@ -214,8 +216,8 @@ const DashboardView = () => {
 
   const handleStartReading = (taskTitle, prompt) => setReadingSession({ title: taskTitle, prompt });
   const handleSendToSpecimen = (text) => { setSpecimenText(text); setActiveView('paste'); };
-  const handleNavigate = (view) => setActiveView(view);
-  const handleBack = () => setActiveView(null);
+  const handleNavigate = (view) => { setActiveView(view); setShowHelp(false); };
+  const handleBack = () => { setActiveView(null); setShowHelp(false); };
 
   if (readingSession) {
     return (
@@ -232,6 +234,7 @@ const DashboardView = () => {
     <div className="w-full min-h-[100dvh] bg-[#0f172a] relative flex items-center justify-center p-0 lg:p-6 overflow-hidden">
       <GreenhouseModal isOpen={isGreenhouseOpen} onClose={() => setIsGreenhouseOpen(false)} />
       {showEssenceGuide && <EssenceGuideModal onClose={() => setShowEssenceGuide(false)} />}
+      {showHelp && activeView && <FeatureHelpModal featureKey={activeView} onClose={() => setShowHelp(false)} />}
       {showOnboarding && <OnboardingModal onComplete={() => setShowOnboarding(false)} />}
 
       <div className="relative w-full flex flex-col premium-glass max-w-none lg:max-w-7xl h-[100dvh] lg:h-[90dvh] p-0 overflow-hidden lg:rounded-3xl">
@@ -298,6 +301,18 @@ const DashboardView = () => {
             </button>
 
             <LangSwitcher />
+
+            {/* Help button — always visible when inside a feature */}
+            {activeView && (
+              <button
+                onClick={() => setShowHelp(true)}
+                className="w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 border border-white/20 text-white/60 hover:text-white rounded-full transition font-black text-sm"
+                title="功能使用說明"
+              >
+                ?
+              </button>
+            )}
+
             <button
               onClick={() => { if (window.confirm('確定要離開語林之境嗎？')) logout(); }}
               className="w-8 h-8 flex items-center justify-center bg-red-400/20 border border-red-400/30 text-base rounded-full hover:bg-red-400/30 transition"

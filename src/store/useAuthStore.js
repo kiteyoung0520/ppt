@@ -9,6 +9,7 @@ export const useAuthStore = create(
       apiKey: null,
       deviceId: null,
       isVerifying: true,
+      _hasHydrated: false,
 
       getDeviceId: () => {
         let devId = get().deviceId;
@@ -55,7 +56,10 @@ export const useAuthStore = create(
       }
     }),
     {
-      name: 'flg-auth-storage'
+      name: 'flg-auth-storage',
+      onRehydrateStorage: () => (state) => {
+        if (state) state._hasHydrated = true;
+      }
     }
   )
 );
