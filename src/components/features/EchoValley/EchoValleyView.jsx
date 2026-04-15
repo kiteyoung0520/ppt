@@ -543,7 +543,7 @@ Respond ONLY in strict JSON (no markdown):
       <div className="flex flex-col h-full bg-stone-50 rounded-2xl overflow-hidden shadow-inner border border-stone-200 animate-popup-fade relative">
         <div className="p-5 bg-emerald-600 shadow-md shrink-0 text-center">
           <div className="text-[40px] mb-1 leading-none">🦜</div>
-          <h2 className="text-lg font-bold text-white font-chn">任務型迂音谷</h2>
+          <h2 className="text-lg font-bold text-white font-chn">任務型回音谷</h2>
           <p className="text-emerald-100 text-xs mt-1">含 AI 即時發音精準度分析</p>
         </div>
         <div className="flex-1 overflow-y-auto p-3 sm:p-5 custom-scroll pb-10">
