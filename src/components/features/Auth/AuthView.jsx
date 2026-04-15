@@ -48,7 +48,6 @@ const AuthView = () => {
   };
 
   return (
-  return (
     <div className="fixed inset-0 bg-stone-900 bg-opacity-95 z-50 flex flex-col items-center justify-center p-4 sm:p-6 backdrop-blur-md overflow-hidden">
       <Fireflies count={18} />
       
