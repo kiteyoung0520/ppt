@@ -51,10 +51,10 @@ const LangSwitcher = () => {
 
 // ── Streak visual tier ────────────────────────────────────────────
 const streakStyle = (n) => {
-  if (n >= 15) return { color: 'text-amber-300', border: 'border-amber-400/60', bg: 'bg-amber-500/20', glow: '0 0 12px rgba(251,191,36,0.6)', icon: '⚡' };
-  if (n >= 8)  return { color: 'text-red-300',   border: 'border-red-400/60',   bg: 'bg-red-500/20',   glow: '0 0 10px rgba(239,68,68,0.5)',   icon: '🔥' };
-  if (n >= 4)  return { color: 'text-orange-300', border: 'border-orange-400/60', bg: 'bg-orange-500/20', glow: '0 0 8px rgba(251,146,60,0.4)', icon: '🔥' };
-  return { color: 'text-stone-400', border: 'border-stone-600/50', bg: 'bg-stone-700/20', glow: 'none', icon: '🔥' };
+  if (n >= 15) return { color: 'text-amber-400', border: 'border-amber-400/60', bg: 'bg-amber-500/30', glow: '0 0 12px rgba(251,191,36,0.8)', icon: '⚡' };
+  if (n >= 8)  return { color: 'text-red-400',   border: 'border-red-400/60',   bg: 'bg-red-500/30',   glow: '0 0 10px rgba(239,68,68,0.7)',   icon: '🔥' };
+  if (n >= 4)  return { color: 'text-orange-400', border: 'border-orange-400/60', bg: 'bg-orange-500/30', glow: '0 0 8px rgba(251,146,60,0.6)', icon: '🔥' };
+  return { color: 'text-emerald-400', border: 'border-emerald-500/40', bg: 'bg-emerald-500/20', glow: '0 0 5px rgba(16,185,129,0.3)', icon: '🔥' };
 };
 
 // ── Feature Hub: Hero Card ──────────────────────────────────────
@@ -264,12 +264,13 @@ const DashboardView = () => {
           <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
             {/* Streak — tiered colors */}
             <div
-              className={`essence-orb w-8 h-8 ${ss.bg} ${ss.border} cursor-default`}
+              className={`essence-orb h-8 px-2.5 rounded-full flex items-center gap-1.5 ${ss.bg} ${ss.border} ${ss.color} cursor-default`}
               title={`連勝 ${streak} 天`}
-              style={{ boxShadow: ss.glow }}
+              style={{ boxShadow: ss.glow, minWidth: '42px' }}
             >
-              <span className="text-xs font-bold z-10">{streak}</span>
-              {streak >= 4 && <div className="absolute inset-0 rounded-full animate-pulse-slow opacity-60" style={{ background: 'currentColor' }} />}
+              <span className="text-xs mb-0.5">{ss.icon}</span>
+              <span className="text-xs font-black z-10">{streak}</span>
+              {streak >= 4 && <div className="absolute inset-0 rounded-full animate-pulse-slow opacity-40 shadow-[inset_0_0_10px_white/20]" style={{ background: 'currentColor' }} />}
             </div>
 
             {/* Coins → opens Greenhouse */}
