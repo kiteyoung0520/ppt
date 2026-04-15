@@ -29,6 +29,8 @@ function doPost(e) {
         return handleUpdateUserStats(payload);
       case 'getRandomQuote':
         return handleGetRandomQuote(payload);
+      case 'register':
+        return handleRegister(payload);
       default:
         return errorResponse("未知的 API Action: " + action);
     }
@@ -81,9 +83,34 @@ function handleLogin(payload) {
       }
     }
   }
+  
+  return errorResponse("帳號不存在，請先進行註冊開通。");
+}
 
-  // 自動註冊新使用者 (如果沒找到該帳號，為求開發方便通常會自動註冊，可依需求刪除)
-  var newApiKey = Utilities.getUuid();
+/**
+ * 處理註冊 (開通)
+ * @param {Object} payload 包含 userId, password, userApiKey, licenseKey
+ */
+function handleRegister(payload) {
+  var userId = payload.userId;
+  var password = payload.password;
+  var userApiKey = payload.userApiKey; // 這是使用者提供的 Gemini API Key
+  var licenseKey = payload.licenseKey;
+
+  if (!userId || !password || !userApiKey || !licenseKey) {
+    return errorResponse("資料不完整，請填寫所有欄位");
+  }
+
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
+  if (!sheet) return errorResponse("系統未設定 Users 表單");
+
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] == userId) {
+      return errorResponse("此園丁名稱已存在，請換一個名字");
+    }
+  }
+
   var defaultStats = JSON.stringify({
     coins: 100,
     streak: 1,
@@ -91,8 +118,8 @@ function handleLogin(payload) {
     unlockedPlants: []
   });
   
-  sheet.appendRow([userId, password, newApiKey, defaultStats, "[]"]);
-  return successResponse({ apiKey: newApiKey, userId: userId, msg: "建立新帳號成功" });
+  sheet.appendRow([userId, password, userApiKey, defaultStats, "[]"]);
+  return successResponse({ userId: userId, msg: "開通成功！歡迎加入植物園" });
 }
 
 /**

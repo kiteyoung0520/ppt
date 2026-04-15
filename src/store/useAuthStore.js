@@ -33,6 +33,14 @@ export const useAuthStore = create(
         throw new Error(res.message);
       },
 
+      register: async (userId, password, apiKey, licenseKey) => {
+        const res = await callApi('register', { userId, password, userApiKey: apiKey, licenseKey });
+        if (res.status === 'success') {
+          return res;
+        }
+        throw new Error(res.message);
+      },
+
       silentVerify: async () => {
         const { currentUser, apiKey, logout } = get();
         // No user — nothing to verify. Clear loading immediately.
