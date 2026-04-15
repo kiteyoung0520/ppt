@@ -230,6 +230,11 @@ User just said: "${userText}"
 
 Reply in character. Respond ONLY in pure JSON (no markdown):
 {
+  "grammar_coach": {
+    "has_error": true,
+    "correction": "The corrected or more natural version of what the user just said in ${currentLang.promptName}",
+    "explanation": "Brief explanation of the mistake or why your correction is more natural (in Traditional Chinese 繁體中文). If the user's sentence was perfect or it's just 'Hello', set has_error to false and leave this empty."
+  },
   "npc_reply": "Your conversational reply in ${currentLang.promptName}",
   "translation": "Traditional Chinese (繁體中文) translation of your reply",
   "suggested_replies": [
@@ -249,6 +254,20 @@ CRITICAL: The "reply" MUST BE IN ${currentLang.promptName}.`;
       for await (const chunk of stream) rawText += chunk;
       
       const parsed = safeParseJSON(rawText);
+
+      // Attach grammar coach feedback to the last user message
+      if (parsed.grammar_coach && parsed.grammar_coach.has_error) {
+        setMessages(prev => {
+          const newArr = [...prev];
+          for (let i = newArr.length - 1; i >= 0; i--) {
+            if (newArr[i].role === 'user') {
+              newArr[i].coach = parsed.grammar_coach;
+              break;
+            }
+          }
+          return newArr;
+        });
+      }
 
       setMessages(prev => [...prev, {
         role: 'npc',
@@ -422,6 +441,22 @@ Rules:
               </div>
               {m.translation && <div className={`text-xs font-chn pt-1 mt-1 border-t ${m.role === 'user' ? 'text-emerald-100 border-emerald-400/50' : 'text-stone-400 border-stone-100'}`}>{m.translation}</div>}
             </div>
+
+            {/* Grammar Coach Feedback */}
+            {m.role === 'user' && m.coach && (
+              <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-2xl max-w-[80%] shadow-sm animate-slideUp text-left self-end">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs">💡</span>
+                  <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest">教練建議 (Coach Tip)</span>
+                </div>
+                <div className="text-sm font-bold text-amber-900 font-eng mb-1 leading-snug">
+                  {m.coach.correction}
+                </div>
+                <div className="text-[11px] text-amber-700/80 font-chn leading-relaxed">
+                  {m.coach.explanation}
+                </div>
+              </div>
+            )}
 
             {/* Suggested replies — last NPC message only */}
             {m.role === 'npc' && m.suggested?.length > 0 && idx === messages.length - 1 && (
