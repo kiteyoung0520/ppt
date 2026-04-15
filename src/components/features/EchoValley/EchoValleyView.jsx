@@ -219,6 +219,7 @@ const EchoValleyView = () => {
   const [topicSelectMode, setTopicSelectMode] = useState(false);
   const [pendingSituation, setPendingSituation] = useState(null);
   const [fluencyStats, setFluencyStats] = useState({ messages: 0, totalChars: 0, chineseChars: 0 });
+  const [sttMode, setSttMode] = useState('target'); // 'target' or 'chinese'
 
   const recognitionRef = useRef(null);
   const chatEndRef = useRef(null);
@@ -246,7 +247,11 @@ const EchoValleyView = () => {
     const rec = new SpeechRecognition();
     rec.continuous = false;
     rec.interimResults = false;
-    rec.lang = langCode || currentLang.speechCode;
+    
+    // Use provided langCode, or fallback to sttMode if available, or currentLang
+    const targetLang = langCode || (sttMode === 'chinese' ? 'zh-TW' : currentLang.speechCode);
+    rec.lang = targetLang;
+    
     return rec;
   };
 
@@ -316,7 +321,8 @@ const EchoValleyView = () => {
 
     const prompt = `
 System Context: ${sysPrompt}
-You are conversing with the user in ${currentLang.promptName}.
+You are conversing with the user in ${currentLang.promptName}. The user is a Chinese speaker and may use Traditional Chinese (中文) when they don't know how to express themselves in ${currentLang.promptName}.
+
 Conversation history:
 ${contextHistory}
 User just said: "${userText}"
@@ -338,8 +344,8 @@ Reply in character. Respond ONLY in pure JSON (no markdown):
 }
 
 Rules for English: Use valid IPA symbols in "phonetic" (e.g., /ˈæp.əl/).
-Rules for Chinese: Respond ONLY in Traditional Chinese.
-CRITICAL: The "reply" MUST BE IN ${currentLang.promptName}.`;
+Language Rule: All Chinese text (in "translation", "explanation", etc.) MUST be Traditional Chinese (繁體中文).
+CRITICAL: The "npc_reply" and "reply" (in suggestions) MUST BE IN ${currentLang.promptName}. Do NOT use Chinese in these fields.`;
 
     try {
       const stream = streamGeminiChat(prompt, apiKey);
@@ -433,7 +439,7 @@ Rules:
   // ── Record pronunciation attempt ──────────────────────────────────
   const handleRecordPronunciation = () => {
     if (!practiceTarget) return;
-    const rec = initRecognition();
+    const rec = initRecognition(currentLang.speechCode);
     if (!rec) return;
 
     rec.onstart = () => setIsPronouncing(true);
@@ -464,7 +470,7 @@ Rules:
       recognitionRef.current.stop();
       return;
     }
-    const rec = initRecognition();
+    const rec = initRecognition(); // Will use sttMode internally
     if (!rec) return;
 
     rec.onstart = () => setIsRecording(true);
@@ -474,7 +480,10 @@ Rules:
       trackFluency(transcript);
       sendToGemini(transcript);
     };
-    rec.onerror = (e) => { toast(`語音辨識錯誤: ${e.error}`); setIsRecording(false); };
+    rec.onerror = (e) => { 
+      if (e.error !== 'no-speech') toast(`語音辨識錯誤: ${e.error}`); 
+      setIsRecording(false); 
+    };
     rec.onend = () => setIsRecording(false);
     recognitionRef.current = rec;
     rec.start();
@@ -864,12 +873,39 @@ Respond ONLY in strict JSON (no markdown):
 
       {/* ── Bottom Mic (free speech) ─── */}
       {!practiceTarget && (
-        <div className="shrink-0 p-4 bg-white border-t border-stone-200 flex justify-center py-5 relative">
-          <div className={`absolute w-14 h-14 bg-emerald-100 rounded-full -translate-y-1 ${isRecording ? 'animate-pulse-ring opacity-100' : 'opacity-0'}`}/>
-          <button onClick={toggleRecording}
-            className={`relative z-10 w-14 h-14 rounded-full shadow-lg transition-all flex items-center justify-center text-xl active:scale-95 ${isRecording ? 'bg-orange-500 text-white' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}>
-            {isRecording ? '🛑' : '🎙️'}
-          </button>
+        <div className="shrink-0 p-4 bg-white border-t border-stone-200 flex flex-col items-center gap-3 py-5 relative">
+          {/* STT Language Toggle */}
+          <div className="flex bg-stone-100 p-1 rounded-full border border-stone-200 shadow-sm transition-all">
+            <button 
+              onClick={() => setSttMode('target')}
+              className={`px-3 py-1 rounded-full text-[10px] font-bold transition-all ${sttMode === 'target' ? 'bg-emerald-600 text-white shadow-sm' : 'text-stone-400 hover:text-stone-600'}`}
+            >
+              🎤 {currentLang.name}
+            </button>
+            <button 
+              onClick={() => setSttMode('chinese')}
+              className={`px-3 py-1 rounded-full text-[10px] font-bold transition-all ${sttMode === 'chinese' ? 'bg-orange-500 text-white shadow-sm' : 'text-stone-400 hover:text-stone-600'}`}
+            >
+              🇹🇼 中文
+            </button>
+          </div>
+
+          <div className="relative">
+            <div className={`absolute inset-0 bg-emerald-100 rounded-full scale-125 ${isRecording ? 'animate-pulse-ring opacity-100' : 'opacity-0'}`}/>
+            <button onClick={toggleRecording}
+              className={`relative z-10 w-14 h-14 rounded-full shadow-lg transition-all flex items-center justify-center text-xl active:scale-95 ${
+                isRecording 
+                  ? 'bg-red-500 text-white ring-4 ring-red-100' 
+                  : (sttMode === 'chinese' ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-emerald-600 text-white hover:bg-emerald-700')
+              }`}>
+              {isRecording ? '🛑' : '🎙️'}
+            </button>
+            {isRecording && (
+              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap bg-stone-800 text-white text-[9px] px-2 py-0.5 rounded-full font-bold animate-bounce shadow-md">
+                正在聽 {sttMode === 'chinese' ? '中文' : currentLang.name}...
+              </div>
+            )}
+          </div>
         </div>
       )}
 
