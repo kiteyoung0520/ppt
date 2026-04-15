@@ -10,6 +10,12 @@ const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecogni
 // ── Situation Data ──────────────────────────────────────────────────
 const CATEGORIZED_SITUATIONS = [
   {
+    category: "💬 自由對話與專屬教練 (Free Talk & Coach)",
+    items: [
+      { id: 'free_coach', label: '🌱 專屬外語教練', isFreeTalk: true }
+    ]
+  },
+  {
     category: "🛒 日常生活與消費 (Daily Life)",
     items: [
       { id: 'cafe', label: '☕ 咖啡廳點餐', prompt: 'You are a barista at a coffee shop taking my order. Ask me what I want to drink.' },
@@ -32,7 +38,7 @@ const CATEGORIZED_SITUATIONS = [
   {
     category: "💼 職場與專業溝通 (Business & Career)",
     items: [
-      { id: 'interview', label: '👤 英文面試自我介紹', prompt: 'You are an HR manager conducting a job interview. Start by asking the candidate to introduce themselves.' },
+      { id: 'interview', label: '👤 外語面試自我介紹', prompt: 'You are an HR manager conducting a job interview. Start by asking the candidate to introduce themselves.' },
       { id: 'meeting', label: '📊 會議發表與打斷', prompt: 'You are leading a meeting presenting sales data. The user will politely interrupt and ask a question.' },
       { id: 'networking', label: '🤝 商務酒會閒談', prompt: 'You are an industry professional at a networking event engaging in small talk.' }
     ]
@@ -48,12 +54,32 @@ const CATEGORIZED_SITUATIONS = [
   {
     category: "🎭 特殊任務與角色扮演 (Roleplay & Tasks)",
     items: [
-      { id: 'emergency', label: '🚑 診所描述病情', prompt: 'You are a doctor at an English-speaking clinic. Ask the user about their symptoms.' },
+      { id: 'emergency', label: '🚑 診所描述病情', prompt: 'You are a doctor at a local clinic. Ask the user about their symptoms.' },
       { id: 'debate', label: '🤖 生死辯論：AI取代人類', prompt: 'You are debating strongly whether AI will completely replace humans. You believe AI WILL replace humans.' },
       { id: 'guide', label: '📸 換你當導遊', prompt: 'You are a tourist visiting Taiwan. The user is a local trying to introduce night market food to you.' }
     ]
   }
 ];
+
+// ── Free Talk Topics ────────────────────────────────────────────────
+const FREE_TALK_TOPICS = [
+  { id: 'travel',  emoji: '🌍', label: '旅行體驗', desc: '聊旅遊、景點、文化差異', hint: 'travel experiences, destinations, and cultural differences' },
+  { id: 'food',    emoji: '🍜', label: '美食探索', desc: '討論食物、餐廳、各國料理', hint: 'food, restaurants, cooking and different cuisines' },
+  { id: 'work',    emoji: '💼', label: '工作學習', desc: '分享職場、學習、職涯目標', hint: 'work, career goals, study plans, and personal growth' },
+  { id: 'hobbies', emoji: '🎮', label: '興趣嗜好', desc: '電影、音樂、遊戲、動漫', hint: 'hobbies like movies, music, games, anime, or books' },
+  { id: 'daily',   emoji: '☀️', label: '生活日常', desc: '今天發生的事、心情分享', hint: 'everyday life, feelings, mood, and what happened recently' },
+  { id: 'free',    emoji: '✨', label: '完全自由', desc: '什麼都可以聊！', hint: 'any topic the user wants — completely open ended' },
+];
+
+const buildCoachPrompt = (lang, topicHint) =>
+  `You are a warm, encouraging, and patient ${lang} language coach. Today's conversation topic: ${topicHint}.
+
+RULES:
+1. Always reply in ${lang} only. Never reply in Chinese yourself.
+2. If the user writes Traditional Chinese (中文), gently acknowledge it and immediately show the ${lang} equivalent: "💡 In ${lang}: [phrase]"
+3. Correct grammar or vocabulary mistakes kindly: "✏️ More naturally: [correction]"
+4. After corrections, ask a follow-up question related to the topic to keep the conversation going.
+5. Celebrate when the user uses a good phrase. Keep replies concise — 2-4 sentences max.`;
 
 // ── Pronunciation Score Ring ────────────────────────────────────────
 const ScoreRing = ({ score }) => {
@@ -189,8 +215,24 @@ const EchoValleyView = () => {
   const sessionMistakesRef = useRef([]);
   const sessionPronounceCountRef = useRef(0);
 
+  // Free Talk Coach state
+  const [topicSelectMode, setTopicSelectMode] = useState(false);
+  const [pendingSituation, setPendingSituation] = useState(null);
+  const [fluencyStats, setFluencyStats] = useState({ messages: 0, totalChars: 0, chineseChars: 0 });
+
   const recognitionRef = useRef(null);
   const chatEndRef = useRef(null);
+  const prevLangRef = useRef(currentLang.speechCode);
+
+  // Detect language switch mid-conversation and notify user
+  useEffect(() => {
+    if (prevLangRef.current !== currentLang.speechCode) {
+      prevLangRef.current = currentLang.speechCode;
+      if (activeSituation) {
+        toast(`語言已切換為 ${currentLang.name}，當前對話建議「退出」後重新開始。`);
+      }
+    }
+  }, [currentLang]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -219,6 +261,15 @@ const EchoValleyView = () => {
   };
 
   const handleStartSituation = (sit) => {
+    if (sit.isFreeTalk) {
+      setPendingSituation(sit);
+      setTopicSelectMode(true);
+      return;
+    }
+    beginSession(sit, sit.prompt, 'Hello!');
+  };
+
+  const beginSession = (sit, sysPrompt, openingMsg) => {
     setActiveSituation(sit);
     setMessages([]);
     setPracticeTarget(null);
@@ -226,11 +277,36 @@ const EchoValleyView = () => {
     setSosMode(false);
     setSosHelp(null);
     setSessionReport(null);
+    setFluencyStats({ messages: 0, totalChars: 0, chineseChars: 0 });
     sessionStartRef.current = Date.now();
     sessionMistakesRef.current = [];
     sessionPronounceCountRef.current = 0;
     recordActivity();
-    sendToGemini('Hello!', sit.prompt);
+    sendToGemini(openingMsg, sysPrompt);
+  };
+
+  const startFreeTalkSession = (topic) => {
+    setTopicSelectMode(false);
+    const coachPrompt = buildCoachPrompt(currentLang.promptName, topic.hint);
+    const enrichedSit = {
+      ...pendingSituation,
+      prompt: coachPrompt,
+      topicLabel: topic.label,
+      topicEmoji: topic.emoji,
+    };
+    beginSession(enrichedSit, coachPrompt, '你好！我想開始練習。');
+  };
+
+  const trackFluency = (text) => {
+    if (!activeSituation || activeSituation.id !== 'free_coach') return;
+    const clean = text.trim().replace(/\s/g, '');
+    if (!clean.length) return;
+    const chinese = (clean.match(/[\u4e00-\u9fff]/g) || []).length;
+    setFluencyStats(prev => ({
+      messages: prev.messages + 1,
+      totalChars: prev.totalChars + clean.length,
+      chineseChars: prev.chineseChars + chinese,
+    }));
   };
 
   const sendToGemini = async (userText, overrideSysPrompt = null) => {
@@ -378,6 +454,7 @@ Rules:
     setPracticeTarget(null);
     setPronunciationResult(null);
     setMessages(prev => [...prev, { role: 'user', text: sug.reply }]);
+    trackFluency(sug.reply);
     sendToGemini(sug.reply);
   };
 
@@ -394,6 +471,7 @@ Rules:
     rec.onresult = (e) => {
       const transcript = e.results[0][0].transcript;
       setMessages(prev => [...prev, { role: 'user', text: transcript }]);
+      trackFluency(transcript);
       sendToGemini(transcript);
     };
     rec.onerror = (e) => { toast(`語音辨識錯誤: ${e.error}`); setIsRecording(false); };
@@ -442,12 +520,19 @@ Respond ONLY in strict JSON (no markdown):
     const secs = durationSecs % 60;
     const essenceEarned = Math.max(10, Math.min(userMessages.length * 5, 80));
     addEssence('rain', essenceEarned);
+    const fluencyScore = fluencyStats.totalChars > 0
+      ? Math.round(((fluencyStats.totalChars - fluencyStats.chineseChars) / fluencyStats.totalChars) * 100)
+      : null;
     setSessionReport({
       situationLabel: activeSituation.label,
+      isFreeTalk: activeSituation.id === 'free_coach',
+      topicLabel: activeSituation.topicLabel || null,
+      topicEmoji: activeSituation.topicEmoji || null,
       messageCount: userMessages.length,
       errorCount: mistakes.length,
       duration: `${mins}分${secs}秒`,
       essenceEarned,
+      fluencyScore,
       mistakes: mistakes.slice(-3).map(m => ({ said: m.text, correction: m.coach.correction, explanation: m.coach.explanation }))
     });
   };
@@ -455,10 +540,10 @@ Respond ONLY in strict JSON (no markdown):
   // ── Situation selector ────────────────────────────────────────────
   if (!activeSituation && !sessionReport) {
     return (
-      <div className="flex flex-col h-full bg-stone-50 rounded-2xl overflow-hidden shadow-inner border border-stone-200 animate-popup-fade">
+      <div className="flex flex-col h-full bg-stone-50 rounded-2xl overflow-hidden shadow-inner border border-stone-200 animate-popup-fade relative">
         <div className="p-5 bg-emerald-600 shadow-md shrink-0 text-center">
           <div className="text-[40px] mb-1 leading-none">🦜</div>
-          <h2 className="text-lg font-bold text-white font-chn">任務型迴音谷</h2>
+          <h2 className="text-lg font-bold text-white font-chn">任務型迂音谷</h2>
           <p className="text-emerald-100 text-xs mt-1">含 AI 即時發音精準度分析</p>
         </div>
         <div className="flex-1 overflow-y-auto p-3 sm:p-5 custom-scroll pb-10">
@@ -469,9 +554,13 @@ Respond ONLY in strict JSON (no markdown):
                 <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {cg.items.map(sit => (
                     <button key={sit.id} onClick={() => handleStartSituation(sit)}
-                      className="text-left bg-white border border-stone-200 hover:border-emerald-400 hover:bg-emerald-50 p-3 rounded-xl transition shadow-sm hover:shadow active:scale-95 group flex items-center justify-between">
-                      <span className="text-stone-700 font-bold text-sm group-hover:text-emerald-700">{sit.label}</span>
-                      <span className="text-stone-300 group-hover:text-emerald-400">›</span>
+                      className={`text-left border p-3 rounded-xl transition shadow-sm hover:shadow active:scale-95 group flex items-center justify-between ${
+                        sit.isFreeTalk
+                          ? 'bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-300 hover:border-emerald-500 hover:from-emerald-100 hover:to-teal-100'
+                          : 'bg-white border-stone-200 hover:border-emerald-400 hover:bg-emerald-50'
+                      }`}>
+                      <span className={`font-bold text-sm ${ sit.isFreeTalk ? 'text-emerald-700 group-hover:text-emerald-900' : 'text-stone-700 group-hover:text-emerald-700' }`}>{sit.label}</span>
+                      <span className={sit.isFreeTalk ? 'text-emerald-400' : 'text-stone-300 group-hover:text-emerald-400'}>›</span>
                     </button>
                   ))}
                 </div>
@@ -479,6 +568,31 @@ Respond ONLY in strict JSON (no markdown):
             ))}
           </div>
         </div>
+
+        {/* ── Topic Selector Overlay ── */}
+        {topicSelectMode && (
+          <div className="absolute inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => { setTopicSelectMode(false); setPendingSituation(null); }}>
+            <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl p-6 mb-2 animate-slideUp" onClick={e => e.stopPropagation()}>
+              <div className="text-center mb-4">
+                <div className="text-3xl mb-1">🌱</div>
+                <h3 className="font-black text-stone-800 text-base">選擇練習主題</h3>
+                <p className="text-xs text-stone-400 mt-0.5">教練會圍繞這個主題引導對話，中外文混用都可以</p>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+                {FREE_TALK_TOPICS.map(topic => (
+                  <button key={topic.id} onClick={() => startFreeTalkSession(topic)}
+                    className="text-left p-3 bg-stone-50 hover:bg-emerald-50 border border-stone-200 hover:border-emerald-400 rounded-2xl transition active:scale-95 group">
+                    <div className="text-2xl mb-1">{topic.emoji}</div>
+                    <div className="font-black text-stone-800 text-sm group-hover:text-emerald-700">{topic.label}</div>
+                    <div className="text-[10px] text-stone-400 mt-0.5 leading-snug">{topic.desc}</div>
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => { setTopicSelectMode(false); setPendingSituation(null); }}
+                className="w-full py-2.5 text-stone-400 hover:text-stone-600 text-sm transition">取消</button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -507,6 +621,33 @@ Respond ONLY in strict JSON (no markdown):
               <div className="text-[10px] text-stone-500 font-bold uppercase">練習時長</div>
             </div>
           </div>
+
+          {/* Fluency Score — Free Talk only */}
+          {sessionReport.isFreeTalk && sessionReport.fluencyScore !== null && (
+            <div className="mb-6">
+              <div className="text-xs font-black text-stone-400 uppercase tracking-widest mb-3">📊 本次流利度指數</div>
+              <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-stone-500">外語比例</span>
+                  <span className="text-2xl font-black text-emerald-700">{sessionReport.fluencyScore}%</span>
+                </div>
+                <div className="h-3 bg-white/60 rounded-full overflow-hidden border border-emerald-200">
+                  <div
+                    className={`h-full rounded-full transition-all duration-1000 ${
+                      sessionReport.fluencyScore >= 80 ? 'bg-emerald-500' :
+                      sessionReport.fluencyScore >= 50 ? 'bg-amber-400' : 'bg-red-400'
+                    }`}
+                    style={{ width: `${sessionReport.fluencyScore}%` }}
+                  />
+                </div>
+                <p className="text-[11px] text-stone-500 mt-2 font-chn">
+                  {sessionReport.fluencyScore >= 80 ? '🌟 太棒了！外語比例十分高，繼續保持！' :
+                   sessionReport.fluencyScore >= 50 ? '🌱 良好進展！試著減少中文使用，讓外語比例再提升。' :
+                   '💡 多用外語表達！如果卡住了請不要愿意直接用中文，嘗試用外語描述看看。'}
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Mistakes Review */}
           {sessionReport.mistakes.length > 0 && (
@@ -549,8 +690,27 @@ Respond ONLY in strict JSON (no markdown):
       {/* Header */}
       <div className="bg-emerald-600 text-white p-3 flex justify-between items-center shadow-md shrink-0">
         <div>
-          <div className="font-bold text-sm">{activeSituation.label}</div>
-          <div className="text-emerald-200 text-xs">含 AI 即時發音評分</div>
+          <div className="font-bold text-sm">
+            {activeSituation.label}
+            {activeSituation.topicLabel && (
+              <span className="ml-2 text-emerald-300 font-normal text-xs">{activeSituation.topicEmoji}{activeSituation.topicLabel}</span>
+            )}
+          </div>
+          {activeSituation.id === 'free_coach' ? (
+            <div className="flex items-center gap-2 mt-0.5">
+              <div className="relative h-1.5 w-20 bg-white/20 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-white rounded-full transition-all duration-700"
+                  style={{ width: `${fluencyStats.totalChars > 0 ? Math.round(((fluencyStats.totalChars - fluencyStats.chineseChars) / fluencyStats.totalChars) * 100) : 0}%` }}
+                />
+              </div>
+              <span className="text-emerald-200 text-[10px] font-bold">
+                流利度 {fluencyStats.totalChars > 0 ? Math.round(((fluencyStats.totalChars - fluencyStats.chineseChars) / fluencyStats.totalChars) * 100) : 0}%
+              </span>
+            </div>
+          ) : (
+            <div className="text-emerald-200 text-xs">含 AI 即時發音評分</div>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {/* SOS Button */}
