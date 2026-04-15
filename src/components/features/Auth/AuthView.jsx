@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import GlassPanel from '../../ui/GlassPanel';
 import { toast } from '../../ui/Toast';
+import Fireflies from '../../ui/Fireflies';
 
 const AuthView = () => {
   const { login, register } = useAuth();
@@ -47,7 +48,12 @@ const AuthView = () => {
   };
 
   return (
-    <div className="fixed inset-0 bg-stone-900 bg-opacity-90 z-50 flex flex-col items-center justify-center p-4 sm:p-6 backdrop-blur-sm">
+  return (
+    <div className="fixed inset-0 bg-stone-900 bg-opacity-95 z-50 flex flex-col items-center justify-center p-4 sm:p-6 backdrop-blur-md overflow-hidden">
+      <Fireflies count={18} />
+      
+      {/* Breathing Center Glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-emerald-500/10 rounded-full breathing-glow blur-[60px] pointer-events-none" />
       <GlassPanel className="p-6 sm:p-8 max-w-sm w-full">
         <div className="flex justify-center mb-6 border-b border-stone-200">
           <button 

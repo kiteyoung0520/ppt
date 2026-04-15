@@ -4,6 +4,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useGame, NATIVE_PLANT_DB } from '../../../context/GameContext';
 import { callApi } from '../../../services/api';
 import { toast } from '../../ui/Toast';
+import Fireflies from '../../ui/Fireflies';
 
 // ── World Tree growth tiers based on unlocked plant count ──────────
 const TREE_TIERS = [
@@ -15,21 +16,6 @@ const TREE_TIERS = [
   { min: 11, emoji: '🌟', label: '語林聖樹', glow: 'rgba(251,191,36,0.7)',  aura: 'from-amber-500/40',   size: 'text-[180px]', desc: '✨ 傳說達成！語林守護者• 福爾摩沙之章' },
 ];
 
-const Firefly = ({ style }) => (
-  <div 
-    className="firefly animate-firefly-pulse absolute"
-    style={{
-      ...style,
-      '--dur': `${2 + Math.random() * 3}s`,
-    }}
-  >
-    <div 
-      className="animate-firefly-move w-full h-full"
-      style={{ '--move-dur': `${8 + Math.random() * 8}s` }}
-    />
-  </div>
-);
-
 const WorldTreeView = ({ onSendToSpecimen }) => {
   const { currentLang } = useSettings();
   const { apiKey } = useAuth();
@@ -38,13 +24,6 @@ const WorldTreeView = ({ onSendToSpecimen }) => {
   const [wisdomLeaf, setWisdomLeaf] = useState(null);
   const [activeReward, setActiveReward] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-
-  // Generate fixed firefly positions 
-  const [fireflies] = useState(() => Array.from({ length: 14 }).map((_, i) => ({
-    top: `${Math.random() * 100}%`,
-    left: `${Math.random() * 100}%`,
-    delay: `${Math.random() * 5}s`,
-  })));
 
   // Calculate tree tier
   const unlockedCount = Array.isArray(stats?.unlockedPlants) ? stats.unlockedPlants.length : 0;
@@ -110,11 +89,7 @@ const WorldTreeView = ({ onSendToSpecimen }) => {
       />
 
       {/* Fireflies Layer */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {fireflies.map((f, i) => (
-          <Firefly key={i} style={{ top: f.top, left: f.left, animationDelay: f.delay }} />
-        ))}
-      </div>
+      <Fireflies count={14} />
 
       {/* Tree Tier Badge */}
       <div className="absolute top-4 left-0 right-0 flex flex-col items-center gap-1 pointer-events-none z-20">
