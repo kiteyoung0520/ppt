@@ -15,6 +15,10 @@ import SpecimenRoomView from '../Specimen/SpecimenRoomView';
 import VocabBookView from '../VocabBook/VocabBookView';
 import ForestTrialView from '../ForestTrial/ForestTrialView';
 
+// UI Overlays
+import OnboardingModal from '../../ui/OnboardingModal';
+import EssenceGuideModal from '../../ui/EssenceGuideModal';
+
 // ── Language Switcher ─────────────────────────────────────────────
 const LANG_OPTIONS = [
   { key: 'en', label: 'EN', flag: '🇺🇸' },
@@ -44,16 +48,22 @@ const LangSwitcher = () => {
   );
 };
 
-// ── Feature Hub: Hero Card ─────────────────────────────────────────
+// ── Streak visual tier ────────────────────────────────────────────
+const streakStyle = (n) => {
+  if (n >= 15) return { color: 'text-amber-300', border: 'border-amber-400/60', bg: 'bg-amber-500/20', glow: '0 0 12px rgba(251,191,36,0.6)', icon: '⚡' };
+  if (n >= 8)  return { color: 'text-red-300',   border: 'border-red-400/60',   bg: 'bg-red-500/20',   glow: '0 0 10px rgba(239,68,68,0.5)',   icon: '🔥' };
+  if (n >= 4)  return { color: 'text-orange-300', border: 'border-orange-400/60', bg: 'bg-orange-500/20', glow: '0 0 8px rgba(251,146,60,0.4)', icon: '🔥' };
+  return { color: 'text-stone-400', border: 'border-stone-600/50', bg: 'bg-stone-700/20', glow: 'none', icon: '🔥' };
+};
+
+// ── Feature Hub: Hero Card ──────────────────────────────────────
 const HeroCard = ({ emoji, title, subtitle, description, badge, gradient, glowColor, onClick }) => (
   <button
     onClick={onClick}
     className={`relative w-full text-left rounded-3xl overflow-hidden p-5 sm:p-7 shadow-xl transition-all duration-300 active:scale-[0.98] group bg-gradient-to-br ${gradient}`}
     style={{ boxShadow: `0 8px 40px -10px ${glowColor}` }}
   >
-    <div className="absolute inset-0 opacity-10" style={{
-      backgroundImage: 'radial-gradient(circle at 80% 20%, white 0%, transparent 50%)'
-    }} />
+    <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 80% 20%, white 0%, transparent 50%)' }} />
     <div className="relative flex items-start justify-between">
       <div className="flex-1">
         <div className="text-4xl sm:text-5xl mb-3 group-hover:scale-110 transition-transform duration-300 inline-block">{emoji}</div>
@@ -68,9 +78,7 @@ const HeroCard = ({ emoji, title, subtitle, description, badge, gradient, glowCo
         </div>
       )}
     </div>
-    <div className="absolute bottom-4 right-4 w-9 h-9 bg-white/20 rounded-full flex items-center justify-center text-white font-black text-lg group-hover:bg-white/40 transition-all group-hover:translate-x-1">
-      ›
-    </div>
+    <div className="absolute bottom-4 right-4 w-9 h-9 bg-white/20 rounded-full flex items-center justify-center text-white font-black text-lg group-hover:bg-white/40 transition-all group-hover:translate-x-1">›</div>
   </button>
 );
 
@@ -80,25 +88,42 @@ const GridCard = ({ emoji, title, subtitle, badge, accent, onClick }) => (
     onClick={onClick}
     className="relative flex items-center gap-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-2xl p-4 text-left transition-all duration-200 active:scale-[0.97] group w-full"
   >
-    <div className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center text-2xl ${accent} shadow-lg group-hover:scale-110 transition-transform`}>
-      {emoji}
-    </div>
+    <div className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center text-2xl ${accent} shadow-lg group-hover:scale-110 transition-transform`}>{emoji}</div>
     <div className="flex-1 min-w-0">
       <div className="font-black text-white text-sm leading-tight">{title}</div>
       <div className="text-stone-400 text-xs font-medium mt-0.5 leading-snug">{subtitle}</div>
     </div>
     {badge > 0 && (
-      <div className="shrink-0 w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center text-xs font-black text-white">
-        {badge}
-      </div>
+      <div className="shrink-0 w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center text-xs font-black text-white">{badge}</div>
     )}
     <div className="shrink-0 text-stone-500 group-hover:text-white transition-colors text-xl font-bold">›</div>
   </button>
 );
 
-// ── Feature Hub Home Screen ────────────────────────────────────────
-const FeatureHub = ({ onNavigate, onOpenGreenhouse, stats, streak, savedWords }) => {
+// ── Streak Warning Banner ─────────────────────────────────────────
+const StreakBanner = ({ streak, onNavigate }) => (
+  <div className="flex items-center gap-3 bg-orange-500/15 border border-orange-400/40 rounded-2xl px-4 py-3 animate-slideUp">
+    <span className="text-xl">⚠️</span>
+    <div className="flex-1 min-w-0">
+      <div className="text-orange-300 text-sm font-black font-chn">今日尚未學習！</div>
+      <div className="text-orange-400/70 text-xs font-chn leading-tight">
+        {streak > 0 ? `連勝 ${streak} 天將在今日午夜歸零` : '完成任一學習活動即可開始連勝'}
+      </div>
+    </div>
+    <button
+      onClick={() => onNavigate('speak')}
+      className="shrink-0 bg-orange-500 hover:bg-orange-400 text-white text-xs font-black px-3 py-2 rounded-xl transition active:scale-95"
+    >
+      立刻學習
+    </button>
+  </div>
+);
+
+// ── Feature Hub Home Screen ─────────────────────────────────────
+const FeatureHub = ({ onNavigate, onOpenGreenhouse, stats, streak, savedWords, lastStudyDate }) => {
   const dueCount = savedWords.filter(w => w.nextReview <= Date.now()).length;
+  const studiedToday = lastStudyDate === new Date().toDateString();
+
   const greet = () => {
     const h = new Date().getHours();
     if (h < 5)  return '🌙 夜深了還在學習';
@@ -108,8 +133,13 @@ const FeatureHub = ({ onNavigate, onOpenGreenhouse, stats, streak, savedWords })
   };
 
   return (
-    <div className="flex flex-col gap-5">
-      {/* Greeting Banner */}
+    <div className="flex flex-col gap-4">
+      {/* Streak Warning Banner */}
+      {!studiedToday && (
+        <StreakBanner streak={streak} onNavigate={onNavigate} />
+      )}
+
+      {/* Greeting + Streak dots */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <p className="text-emerald-400 text-sm font-bold">{greet()}</p>
@@ -119,15 +149,14 @@ const FeatureHub = ({ onNavigate, onOpenGreenhouse, stats, streak, savedWords })
               {[...Array(Math.min(streak, 7))].map((_, i) => (
                 <div key={i} className="w-2.5 h-2.5 rounded-full bg-orange-400 shadow-[0_0_5px_rgba(251,146,60,0.8)]" />
               ))}
+              {streak > 7 && <span className="text-orange-400 text-xs font-black">+{streak - 7}</span>}
             </div>
             <span className="text-orange-400 text-sm font-black">{streak} 天</span>
+            {studiedToday && <span className="text-emerald-400 text-xs font-bold">✓ 今日已學習</span>}
           </div>
         </div>
         {dueCount > 0 && (
-          <button
-            onClick={() => onNavigate('vocab')}
-            className="bg-orange-500/20 border border-orange-400/40 rounded-2xl px-4 py-2 flex items-center gap-2 active:scale-95 transition"
-          >
+          <button onClick={() => onNavigate('vocab')} className="bg-orange-500/20 border border-orange-400/40 rounded-2xl px-4 py-2 flex items-center gap-2 active:scale-95 transition">
             <span className="text-base">📚</span>
             <span className="text-orange-300 text-sm font-bold">{dueCount} 個單字待複習</span>
           </button>
@@ -137,24 +166,8 @@ const FeatureHub = ({ onNavigate, onOpenGreenhouse, stats, streak, savedWords })
       {/* Hero Cards */}
       <div className="flex flex-col gap-3">
         <p className="text-xs text-stone-500 font-black uppercase tracking-widest">✦ 核心學習</p>
-        <HeroCard
-          emoji="🌱"
-          title="育苗室"
-          subtitle="AI Nursery · Topic Reading"
-          description="選擇主題，由 AI 即時生成沉浸式文章，在閱讀中自然習得詞彙。"
-          gradient="from-emerald-700 via-teal-600 to-cyan-700"
-          glowColor="rgba(16,185,129,0.5)"
-          onClick={() => onNavigate('topic')}
-        />
-        <HeroCard
-          emoji="🦜"
-          title="迴音谷"
-          subtitle="AI Coach · Voice Roleplay"
-          description="與 AI 情境對話，獲得即時文法糾正、發音評分與課後體檢報告。"
-          gradient="from-violet-700 via-purple-600 to-indigo-700"
-          glowColor="rgba(139,92,246,0.5)"
-          onClick={() => onNavigate('speak')}
-        />
+        <HeroCard emoji="🌱" title="育苗室" subtitle="AI Nursery · Topic Reading" description="選擇主題，由 AI 即時生成沉浸式文章，在閱讀中自然習得詞彙。" gradient="from-emerald-700 via-teal-600 to-cyan-700" glowColor="rgba(16,185,129,0.5)" onClick={() => onNavigate('topic')} />
+        <HeroCard emoji="🦜" title="迴音谷" subtitle="AI Coach · Voice Roleplay" description="與 AI 情境對話，獲得即時文法糾正、發音評分與課後體檢報告。" gradient="from-violet-700 via-purple-600 to-indigo-700" glowColor="rgba(139,92,246,0.5)" onClick={() => onNavigate('speak')} />
       </div>
 
       {/* Grid Cards */}
@@ -177,19 +190,27 @@ const FeatureHub = ({ onNavigate, onOpenGreenhouse, stats, streak, savedWords })
 // ── Dashboard ──────────────────────────────────────────────────────
 const DashboardView = () => {
   const { currentUser, logout } = useAuth();
-  const { stats, streak, savedWords } = useGame();
+  const { stats, streak, savedWords, lastStudyDate } = useGame();
   const { targetLangKey } = useSettings();
 
   const [activeView, setActiveView] = useState(null);
   const [readingSession, setReadingSession] = useState(null);
   const [isGreenhouseOpen, setIsGreenhouseOpen] = useState(false);
   const [specimenText, setSpecimenText] = useState('');
+  const [showEssenceGuide, setShowEssenceGuide] = useState(false);
+
+  // Onboarding: shown once per device
+  const [showOnboarding, setShowOnboarding] = useState(
+    () => !localStorage.getItem('flg-onboarded')
+  );
 
   const VIEW_LABELS = {
     topic: '🌱 育苗室', explore: '🌳 世界樹', speak: '🦜 迴音谷',
-    vocab: '📚 單字本', paste: '🔬 標本室', translate: '🕊️ 隨身口譯', chronicles: '📜 長卷',
-    trial: '⚔️ 語林試鍊'
+    vocab: '📚 單字本', paste: '🔬 標本室', translate: '🕊️ 隨身口譯',
+    chronicles: '📜 長卷', trial: '⚔️ 語林試鍊'
   };
+
+  const ss = streakStyle(streak);
 
   const handleStartReading = (taskTitle, prompt) => setReadingSession({ title: taskTitle, prompt });
   const handleSendToSpecimen = (text) => { setSpecimenText(text); setActiveView('paste'); };
@@ -210,6 +231,8 @@ const DashboardView = () => {
   return (
     <div className="w-full min-h-[100dvh] bg-[#0f172a] relative flex items-center justify-center p-0 lg:p-6 overflow-hidden">
       <GreenhouseModal isOpen={isGreenhouseOpen} onClose={() => setIsGreenhouseOpen(false)} />
+      {showEssenceGuide && <EssenceGuideModal onClose={() => setShowEssenceGuide(false)} />}
+      {showOnboarding && <OnboardingModal onComplete={() => setShowOnboarding(false)} />}
 
       <div className="relative w-full flex flex-col premium-glass max-w-none lg:max-w-7xl h-[100dvh] lg:h-[90dvh] p-0 overflow-hidden lg:rounded-3xl">
 
@@ -218,10 +241,7 @@ const DashboardView = () => {
 
           {/* Back / Logo */}
           {activeView ? (
-            <button
-              onClick={handleBack}
-              className="flex items-center gap-1 text-emerald-400 hover:text-white font-bold text-base transition mr-1 py-1 px-2 rounded-xl hover:bg-white/10 active:scale-95"
-            >
+            <button onClick={handleBack} className="flex items-center gap-1 text-emerald-400 hover:text-white font-bold text-base transition mr-1 py-1 px-2 rounded-xl hover:bg-white/10 active:scale-95">
               ‹ <span className="text-sm text-stone-400 ml-1">{VIEW_LABELS[activeView]}</span>
             </button>
           ) : (
@@ -239,18 +259,29 @@ const DashboardView = () => {
 
           {/* Status Orbs */}
           <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
-            {/* Streak */}
-            <div className="essence-orb w-8 h-8 bg-orange-500/20 border-orange-400/50 text-orange-400" title={`連勝 ${streak} 天`}>
+            {/* Streak — tiered colors */}
+            <div
+              className={`essence-orb w-8 h-8 ${ss.bg} ${ss.border} cursor-default`}
+              title={`連勝 ${streak} 天`}
+              style={{ boxShadow: ss.glow }}
+            >
               <span className="text-xs font-bold z-10">{streak}</span>
-              <div className="absolute inset-0 bg-orange-400/20 blur-md rounded-full animate-pulse-slow" />
+              {streak >= 4 && <div className="absolute inset-0 rounded-full animate-pulse-slow opacity-60" style={{ background: 'currentColor' }} />}
             </div>
-            {/* Coins */}
+
+            {/* Coins → opens Greenhouse */}
             <button onClick={() => setIsGreenhouseOpen(true)} className="essence-orb w-8 h-8 bg-amber-500/20 border-amber-400/50 text-amber-400" title="金幣/溫室">
               <span className="text-xs font-bold z-10">{stats.coins}</span>
             </button>
+
             <div className="h-5 w-px bg-white/10" />
-            {/* Essence */}
-            <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-2.5 py-1.5 rounded-full">
+
+            {/* Essence Row — clickable to open guide */}
+            <button
+              onClick={() => setShowEssenceGuide(true)}
+              className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-emerald-500/40 px-2.5 py-1.5 rounded-full transition cursor-pointer group"
+              title="點擊查看精華說明"
+            >
               <div className="flex items-center gap-1" title="日光精華">
                 <div className="w-2 h-2 rounded-full bg-orange-400 shadow-[0_0_4px_rgba(251,146,60,0.8)]" />
                 <span className="text-xs font-black text-orange-200">{stats.essence?.light || 0}</span>
@@ -263,7 +294,9 @@ const DashboardView = () => {
                 <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_4px_rgba(52,211,153,0.8)]" />
                 <span className="text-xs font-black text-emerald-100">{stats.essence?.soil || 0}</span>
               </div>
-            </div>
+              <span className="text-[9px] text-stone-600 group-hover:text-emerald-500 font-bold transition">?</span>
+            </button>
+
             <LangSwitcher />
             <button
               onClick={() => { if (window.confirm('確定要離開語林之境嗎？')) logout(); }}
@@ -285,6 +318,7 @@ const DashboardView = () => {
                 stats={stats}
                 streak={streak}
                 savedWords={savedWords}
+                lastStudyDate={lastStudyDate}
               />
             </div>
           ) : (
