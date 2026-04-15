@@ -445,12 +445,21 @@ Rules:
             {/* Grammar Coach Feedback */}
             {m.role === 'user' && m.coach && (
               <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-2xl max-w-[80%] shadow-sm animate-slideUp text-left self-end">
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-2">
                   <span className="text-xs">💡</span>
                   <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest">教練建議 (Coach Tip)</span>
                 </div>
-                <div className="text-sm font-bold text-amber-900 font-eng mb-1 leading-snug">
-                  {m.coach.correction}
+                <div className="flex items-center gap-2 bg-white border border-amber-200 rounded-xl px-3 py-2 mb-2">
+                  <p className="text-sm font-bold text-amber-900 font-eng flex-1 leading-snug">
+                    {m.coach.correction}
+                  </p>
+                  <button
+                    onClick={() => speakText(m.coach.correction)}
+                    className="shrink-0 w-8 h-8 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-full flex items-center justify-center transition active:scale-95"
+                    title="聆聽正確發音"
+                  >
+                    🔊
+                  </button>
                 </div>
                 <div className="text-[11px] text-amber-700/80 font-chn leading-relaxed">
                   {m.coach.explanation}
