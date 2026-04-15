@@ -1,29 +1,57 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbz4B6pMZAS4rBuVWsT5UMOgfuhvSmbw2z-6niF-hQATZE6oZk5hKeu0PUImgRTmTUdj/exec";
 
 export const TARGET_LANGS = {
-    'en': { name: 'English', promptName: 'English', speechCode: 'en-US' },
-    'ja': { name: '日語', promptName: 'Japanese', speechCode: 'ja-JP' },
-    'ko': { name: '韓語', promptName: 'Korean', speechCode: 'ko-KR' }
+  'en': { name: 'English', promptName: 'English', speechCode: 'en-US' },
+  'ja': { name: '日語', promptName: 'Japanese', speechCode: 'ja-JP' },
+  'ko': { name: '韓語', promptName: 'Korean', speechCode: 'ko-KR' }
 };
 
+// Simple persistent cache for non-critical GET-like actions
+const apiCache = new Map();
+const CACHE_TTL = 30000; // 30 seconds
+
 export async function callApi(action, params, apiKey = null, targetLangKey = 'en') {
+  const cacheKey = `${action}_${JSON.stringify(params)}_${targetLangKey}`;
+  
+  // Check cache for specific actions (like getting quotes)
+  if (action === 'getRandomQuote' && apiCache.has(cacheKey)) {
+    const cached = apiCache.get(cacheKey);
+    if (Date.now() - cached.time < CACHE_TTL) return cached.data;
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
   try {
     const payload = { 
         action, 
         targetLang: TARGET_LANGS[targetLangKey]?.promptName || 'English', 
         ...params 
     };
-    if (apiKey) {
-        payload.apiKey = apiKey;
-    }
+    if (apiKey) payload.apiKey = apiKey;
     
-    const res = await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
+    const res = await fetch(API_URL, { 
+      method: "POST", 
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
     const json = await res.json();
+    
     if (json.status === 'error') throw new Error(json.message);
+
+    // Save to cache if applicable
+    if (action === 'getRandomQuote') {
+      apiCache.set(cacheKey, { data: json, time: Date.now() });
+    }
+
     return json;
-  } catch (e) { 
-      console.error("API Error:", e);
-      throw e; 
+  } catch (e) {
+    clearTimeout(timeoutId);
+    if (e.name === 'AbortError') throw new Error("伺服器回應過慢，請稍後再試");
+    console.error("API Error:", e);
+    throw e; 
   }
 }
 

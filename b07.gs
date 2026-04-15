@@ -117,7 +117,7 @@ function handleGetUserStats(payload) {
 }
 
 /**
- * 更新使用者狀態與單字本
+ * 更新使用者狀態與單字本 (優化版：合併寫入，減少 API 呼叫)
  * @param {Object} payload 包含 userId, apiKey, stats(物件), savedWords(陣列)
  */
 function handleUpdateUserStats(payload) {
@@ -127,10 +127,15 @@ function handleUpdateUserStats(payload) {
   var rowIndex = rowData.rowIndex;
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
 
-  if (payload.stats) {
+  // 如果同時有 stats 和 savedWords，合併成一次更新以提升反應速度
+  if (payload.stats && payload.savedWords) {
+    sheet.getRange(rowIndex, 4, 1, 2).setValues([[
+      JSON.stringify(payload.stats),
+      JSON.stringify(payload.savedWords)
+    ]]);
+  } else if (payload.stats) {
     sheet.getRange(rowIndex, 4).setValue(JSON.stringify(payload.stats));
-  }
-  if (payload.savedWords) {
+  } else if (payload.savedWords) {
     sheet.getRange(rowIndex, 5).setValue(JSON.stringify(payload.savedWords));
   }
 
