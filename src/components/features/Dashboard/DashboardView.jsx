@@ -13,6 +13,7 @@ import EchoValleyView from '../EchoValley/EchoValleyView';
 import TranslatorView from '../Translator/TranslatorView';
 import SpecimenRoomView from '../Specimen/SpecimenRoomView';
 import VocabBookView from '../VocabBook/VocabBookView';
+import ForestTrialView from '../ForestTrial/ForestTrialView';
 
 // ── Language Switcher ─────────────────────────────────────────────
 const LANG_OPTIONS = [
@@ -166,6 +167,7 @@ const FeatureHub = ({ onNavigate, onOpenGreenhouse, stats, streak, savedWords })
           <GridCard emoji="🕊️" title="隨身口譯" subtitle="即時雙向翻譯" accent="bg-sky-900/60" onClick={() => onNavigate('translate')} />
           <GridCard emoji="🌸" title="溫室 · 扭蛋機" subtitle="收集臺灣特有種植物" accent="bg-amber-900/60" onClick={() => onOpenGreenhouse()} />
           <GridCard emoji="📜" title="福爾摩沙長卷" subtitle="解鎖傳奇圖鑑進度" accent="bg-stone-700/60" onClick={() => onNavigate('chronicles')} />
+          <GridCard emoji="⚔️" title="語林試鍊" subtitle="守護靈英文知識問答" accent="bg-red-900/60" onClick={() => onNavigate('trial')} />
         </div>
       </div>
     </div>
@@ -185,7 +187,8 @@ const DashboardView = () => {
 
   const VIEW_LABELS = {
     topic: '🌱 育苗室', explore: '🌳 世界樹', speak: '🦜 迴音谷',
-    vocab: '📚 單字本', paste: '🔬 標本室', translate: '🕊️ 隨身口譯', chronicles: '📜 長卷'
+    vocab: '📚 單字本', paste: '🔬 標本室', translate: '🕊️ 隨身口譯', chronicles: '📜 長卷',
+    trial: '⚔️ 語林試鍊'
   };
 
   const handleStartReading = (taskTitle, prompt) => setReadingSession({ title: taskTitle, prompt });
@@ -294,6 +297,7 @@ const DashboardView = () => {
                 {activeView === 'paste'      && <SpecimenRoomView key={specimenText} initialText={specimenText} />}
                 {activeView === 'translate'  && <TranslatorView />}
                 {activeView === 'chronicles' && <ChroniclesView />}
+                {activeView === 'trial'      && <ForestTrialView />}
               </div>
             </div>
           )}
