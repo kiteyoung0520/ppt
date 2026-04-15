@@ -35,7 +35,11 @@ export const useAuthStore = create(
 
       silentVerify: async () => {
         const { currentUser, apiKey, logout } = get();
-        if (!currentUser || !apiKey) return;
+        // No user — nothing to verify. Clear loading immediately.
+        if (!currentUser || !apiKey) {
+          set({ isVerifying: false });
+          return;
+        }
 
         set({ isVerifying: true });
         try {
@@ -45,7 +49,6 @@ export const useAuthStore = create(
           }
         } catch (e) {
           console.error("AuthStore: Silent verification failed", e);
-          // Optionally logout on fatal errors
         } finally {
           set({ isVerifying: false });
         }
@@ -57,6 +60,14 @@ export const useAuthStore = create(
     }),
     {
       name: 'flg-auth-storage',
+      // CRITICAL: never persist isVerifying or _hasHydrated.
+      // If persisted, they can start as `false` on reload and cause a flash
+      // of the dashboard before silentVerify() has a chance to run.
+      partialize: (state) => ({
+        currentUser: state.currentUser,
+        apiKey: state.apiKey,
+        deviceId: state.deviceId,
+      }),
       onRehydrateStorage: () => (state) => {
         if (state) state._hasHydrated = true;
       }
