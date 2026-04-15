@@ -15,6 +15,21 @@ const TREE_TIERS = [
   { min: 11, emoji: '🌟', label: '語林聖樹', glow: 'rgba(251,191,36,0.7)',  aura: 'from-amber-500/40',   size: 'text-[180px]', desc: '✨ 傳說達成！語林守護者• 福爾摩沙之章' },
 ];
 
+const Firefly = ({ style }) => (
+  <div 
+    className="firefly animate-firefly-pulse absolute"
+    style={{
+      ...style,
+      '--dur': `${2 + Math.random() * 3}s`,
+    }}
+  >
+    <div 
+      className="animate-firefly-move w-full h-full"
+      style={{ '--move-dur': `${8 + Math.random() * 8}s` }}
+    />
+  </div>
+);
+
 const WorldTreeView = ({ onSendToSpecimen }) => {
   const { currentLang } = useSettings();
   const { apiKey } = useAuth();
@@ -23,6 +38,13 @@ const WorldTreeView = ({ onSendToSpecimen }) => {
   const [wisdomLeaf, setWisdomLeaf] = useState(null);
   const [activeReward, setActiveReward] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Generate fixed firefly positions 
+  const [fireflies] = useState(() => Array.from({ length: 14 }).map((_, i) => ({
+    top: `${Math.random() * 100}%`,
+    left: `${Math.random() * 100}%`,
+    delay: `${Math.random() * 5}s`,
+  })));
 
   // Calculate tree tier
   const unlockedCount = Array.isArray(stats?.unlockedPlants) ? stats.unlockedPlants.length : 0;
@@ -75,8 +97,27 @@ const WorldTreeView = ({ onSendToSpecimen }) => {
       <div className={`absolute inset-0 bg-gradient-to-b ${tier.aura} to-transparent pointer-events-none transition-all duration-2000`} />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(16,185,129,0.05)_0%,_transparent_70%)] pointer-events-none" />
 
+      {/* Breathing Background Glow */}
+      <div 
+        className="absolute w-[300px] h-[300px] rounded-full breathing-glow transition-all duration-1000"
+        style={{ 
+          background: tier.glow.replace('0.7', '0.2').replace('0.6', '0.15').replace('0.45', '0.1'),
+          top: '40%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          zIndex: 0
+        }} 
+      />
+
+      {/* Fireflies Layer */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {fireflies.map((f, i) => (
+          <Firefly key={i} style={{ top: f.top, left: f.left, animationDelay: f.delay }} />
+        ))}
+      </div>
+
       {/* Tree Tier Badge */}
-      <div className="absolute top-4 left-0 right-0 flex flex-col items-center gap-1 pointer-events-none">
+      <div className="absolute top-4 left-0 right-0 flex flex-col items-center gap-1 pointer-events-none z-20">
         <div className="flex items-center gap-2 px-4 py-1.5 bg-black/40 rounded-full border border-white/10 backdrop-blur-sm">
           <div className="flex gap-1">
             {TREE_TIERS.slice(0,5).map((t, i) => (

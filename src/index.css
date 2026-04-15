@@ -50,23 +50,46 @@
   }
 }
 
-/* Firefly Animation */
+/* Firefly & Breathing Effects */
 .firefly {
   position: absolute;
-  background: #fcd34d;
+  width: 4px;
+  height: 4px;
+  background: #fbbf24;
   border-radius: 50%;
   pointer-events: none;
-  z-index: 0;
-  box-shadow: 0 0 8px 2px rgba(251, 191, 36, 0.4);
-  animation: fly 15s infinite ease-in-out;
+  z-index: 1;
+  box-shadow: 0 0 10px 2px rgba(251, 191, 36, 0.6);
   filter: blur(0.5px);
 }
 
-@keyframes fly {
-  0% { transform: translate(0, 0) scale(1); opacity: 0; }
-  15% { opacity: 0.8; }
-  85% { opacity: 0.8; }
-  100% { transform: translate(var(--dx, 100px), var(--dy, -100px)) scale(1.5); opacity: 0; }
+.animate-firefly-pulse {
+  animation: firefly-pulse var(--dur, 3s) ease-in-out infinite alternate;
+}
+
+.animate-firefly-move {
+  animation: firefly-move var(--move-dur, 10s) ease-in-out infinite alternate;
+}
+
+@keyframes firefly-pulse {
+  0% { opacity: 0.2; transform: scale(0.8); box-shadow: 0 0 5px 1px rgba(251, 191, 36, 0.3); }
+  100% { opacity: 1; transform: scale(1.2); box-shadow: 0 0 15px 4px rgba(251, 191, 36, 0.8); }
+}
+
+@keyframes firefly-move {
+  0% { translate: 0 0; }
+  33% { translate: 20px -30px; }
+  66% { translate: -20px -15px; }
+  100% { translate: 10px -45px; }
+}
+
+.breathing-glow {
+  animation: breathing 4s ease-in-out infinite;
+}
+
+@keyframes breathing {
+  0%, 100% { opacity: 0.3; transform: scale(1); filter: blur(40px); }
+  50% { opacity: 0.6; transform: scale(1.1); filter: blur(60px); }
 }
 
 /* Landscape/Short Screen Optimization */
