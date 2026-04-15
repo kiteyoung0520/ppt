@@ -174,9 +174,20 @@ const EchoValleyView = () => {
   const [isThinking, setIsThinking] = useState(false);
 
   // Pronunciation practice state
-  const [practiceTarget, setPracticeTarget] = useState(null); // { reply, pinyin, translation }
+  const [practiceTarget, setPracticeTarget] = useState(null);
   const [isPronouncing, setIsPronouncing] = useState(false);
   const [pronunciationResult, setPronunciationResult] = useState(null);
+
+  // SOS Coach state (Proposal 2)
+  const [sosMode, setSosMode] = useState(false);
+  const [sosHelp, setSosHelp] = useState(null);
+  const [isSosLoading, setIsSosLoading] = useState(false);
+
+  // Post-Session Report state (Proposal 3)
+  const [sessionReport, setSessionReport] = useState(null); // null = not shown
+  const sessionStartRef = useRef(null);
+  const sessionMistakesRef = useRef([]);
+  const sessionPronounceCountRef = useRef(0);
 
   const recognitionRef = useRef(null);
   const chatEndRef = useRef(null);
@@ -212,7 +223,13 @@ const EchoValleyView = () => {
     setMessages([]);
     setPracticeTarget(null);
     setPronunciationResult(null);
-    recordActivity(); // Reward starting a task
+    setSosMode(false);
+    setSosHelp(null);
+    setSessionReport(null);
+    sessionStartRef.current = Date.now();
+    sessionMistakesRef.current = [];
+    sessionPronounceCountRef.current = 0;
+    recordActivity();
     sendToGemini('Hello!', sit.prompt);
   };
 
@@ -385,8 +402,58 @@ Rules:
     rec.start();
   };
 
+  // ─── SOS Coach Request (Proposal 2) ─────────────────────────────
+  const handleSosRequest = async () => {
+    const lastNpc = [...messages].reverse().find(m => m.role === 'npc');
+    if (!lastNpc) return;
+    setIsSosLoading(true);
+    setSosMode(true);
+    setSosHelp(null);
+    try {
+      const p = `You are a supportive ${currentLang.promptName} language coach. 
+The NPC just said: "${lastNpc.text}"
+The student does not understand how to respond.
+
+Respond ONLY in strict JSON (no markdown):
+{
+  "breakdown": "Brief explanation of what the NPC said and any key vocabulary, written in Traditional Chinese (繁體中文)",
+  "hint": "A gentle Chinese hint about what the student could try to say next, without giving the exact English answer",
+  "example": "A natural example sentence in ${currentLang.promptName} the student could use",
+  "example_chn": "The Chinese translation of the example sentence"
+}`;
+      const stream = streamGeminiChat(p, apiKey);
+      let raw = '';
+      for await (const chunk of stream) raw += chunk;
+      setSosHelp(safeParseJSON(raw));
+    } catch (e) {
+      toast('教練求救失敗：' + e.message);
+      setSosMode(false);
+    } finally {
+      setIsSosLoading(false);
+    }
+  };
+
+  // ─── Exit Session → Generate Report (Proposal 3) ─────────────────
+  const handleExitSession = async () => {
+    const userMessages = messages.filter(m => m.role === 'user');
+    const mistakes = messages.filter(m => m.role === 'user' && m.coach);
+    const durationSecs = sessionStartRef.current ? Math.round((Date.now() - sessionStartRef.current) / 1000) : 0;
+    const mins = Math.floor(durationSecs / 60);
+    const secs = durationSecs % 60;
+    const essenceEarned = Math.max(10, Math.min(userMessages.length * 5, 80));
+    addEssence('rain', essenceEarned);
+    setSessionReport({
+      situationLabel: activeSituation.label,
+      messageCount: userMessages.length,
+      errorCount: mistakes.length,
+      duration: `${mins}分${secs}秒`,
+      essenceEarned,
+      mistakes: mistakes.slice(-3).map(m => ({ said: m.text, correction: m.coach.correction, explanation: m.coach.explanation }))
+    });
+  };
+
   // ── Situation selector ────────────────────────────────────────────
-  if (!activeSituation) {
+  if (!activeSituation && !sessionReport) {
     return (
       <div className="flex flex-col h-full bg-stone-50 rounded-2xl overflow-hidden shadow-inner border border-stone-200 animate-popup-fade">
         <div className="p-5 bg-emerald-600 shadow-md shrink-0 text-center">
@@ -416,16 +483,88 @@ Rules:
     );
   }
 
+  // ── Session Report Screen (Proposal 3) ───────────────────────────
+  if (sessionReport) {
+    return (
+      <div className="flex flex-col h-full bg-stone-50 rounded-2xl overflow-hidden shadow-inner border border-stone-200 items-center justify-center p-6 animate-fadeIn">
+        <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-stone-200 p-8 text-center">
+          <div className="text-6xl mb-4">📊</div>
+          <div className="text-[10px] font-black text-emerald-600 tracking-widest uppercase mb-1">Post-Session Report</div>
+          <h2 className="text-xl font-black text-stone-800 mb-6 font-chn">{sessionReport.situationLabel} · 課後報告</h2>
+
+          {/* Stats Row */}
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3">
+              <div className="text-2xl font-black text-emerald-700">{sessionReport.messageCount}</div>
+              <div className="text-[10px] text-stone-500 font-bold uppercase">發言次數</div>
+            </div>
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3">
+              <div className="text-2xl font-black text-amber-700">{sessionReport.errorCount}</div>
+              <div className="text-[10px] text-stone-500 font-bold uppercase">教練糾正</div>
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-3">
+              <div className="text-2xl font-black text-blue-700">{sessionReport.duration}</div>
+              <div className="text-[10px] text-stone-500 font-bold uppercase">練習時長</div>
+            </div>
+          </div>
+
+          {/* Mistakes Review */}
+          {sessionReport.mistakes.length > 0 && (
+            <div className="text-left mb-6">
+              <div className="text-xs font-black text-stone-400 uppercase tracking-widest mb-3">📌 本次常見錯誤</div>
+              <div className="flex flex-col gap-2">
+                {sessionReport.mistakes.map((mk, i) => (
+                  <div key={i} className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-left">
+                    <div className="text-xs text-stone-400 font-chn mb-1">你說了：<span className="text-stone-600 italic font-eng">"{mk.said}"</span></div>
+                    <div className="text-sm font-bold text-emerald-800 font-eng">✅ {mk.correction}</div>
+                    <div className="text-[11px] text-stone-500 font-chn mt-1">{mk.explanation}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Essence Reward */}
+          <div className="bg-blue-50 border border-blue-300 rounded-2xl p-4 mb-6 flex items-center gap-3">
+            <div className="text-3xl">💧</div>
+            <div className="text-left">
+              <div className="text-base font-black text-blue-800">+{sessionReport.essenceEarned} 雨露精華</div>
+              <div className="text-[11px] text-blue-600 font-chn">語言肌肉因今天的練習而更強壯了！</div>
+            </div>
+          </div>
+
+          <button
+            onClick={() => { setActiveSituation(null); setSessionReport(null); }}
+            className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl transition active:scale-95 shadow-lg"
+          >
+            🌱 返回任務選擇
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col h-full bg-stone-50 rounded-2xl overflow-hidden shadow-inner border border-stone-200">
+    <div className="flex flex-col h-full bg-stone-50 rounded-2xl overflow-hidden shadow-inner border border-stone-200 relative">
       {/* Header */}
       <div className="bg-emerald-600 text-white p-3 flex justify-between items-center shadow-md shrink-0">
         <div>
           <div className="font-bold text-sm">{activeSituation.label}</div>
           <div className="text-emerald-200 text-xs">含 AI 即時發音評分</div>
         </div>
-        <button onClick={() => { setActiveSituation(null); setPracticeTarget(null); setPronunciationResult(null); }}
-          className="text-emerald-100 hover:text-white text-xs font-bold bg-emerald-700 hover:bg-emerald-800 px-3 py-1 rounded-full">退出</button>
+        <div className="flex items-center gap-2">
+          {/* SOS Button */}
+          <button
+            onClick={handleSosRequest}
+            disabled={isSosLoading || isThinking || messages.filter(m => m.role === 'npc').length === 0}
+            className="text-xs font-bold bg-red-500/80 hover:bg-red-400 disabled:opacity-30 text-white px-2.5 py-1 rounded-full flex items-center gap-1 transition active:scale-95"
+            title="向教練求救"
+          >
+            {isSosLoading ? '🔄' : '🆘'} 求救
+          </button>
+          <button onClick={handleExitSession}
+            className="text-emerald-100 hover:text-white text-xs font-bold bg-emerald-700 hover:bg-emerald-800 px-3 py-1 rounded-full">退出</button>
+        </div>
       </div>
 
       {/* Chat area */}
@@ -571,6 +710,51 @@ Rules:
             className={`relative z-10 w-14 h-14 rounded-full shadow-lg transition-all flex items-center justify-center text-xl active:scale-95 ${isRecording ? 'bg-orange-500 text-white' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}>
             {isRecording ? '🛑' : '🎙️'}
           </button>
+        </div>
+      )}
+
+      {/* ── SOS Coach Overlay (Proposal 2) ─── */}
+      {sosMode && (
+        <div className="absolute inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => { setSosMode(false); setSosHelp(null); }}>
+          <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl p-6 mb-2 animate-slideUp" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🆘</span>
+                <span className="font-black text-stone-800 text-sm">教練緊急支援中...</span>
+              </div>
+              <button onClick={() => { setSosMode(false); setSosHelp(null); }} className="text-stone-300 hover:text-stone-500 text-xl">✕</button>
+            </div>
+
+            {isSosLoading ? (
+              <div className="py-8 flex flex-col items-center gap-3 text-stone-400">
+                <div className="flex gap-1">
+                  <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" />
+                  <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{animationDelay:'0.1s'}} />
+                  <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{animationDelay:'0.2s'}} />
+                </div>
+                <span className="text-sm font-chn">教練正在分析，請稍候...</span>
+              </div>
+            ) : sosHelp && (
+              <div className="flex flex-col gap-3">
+                <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
+                  <div className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">📖 對方說了什麼？</div>
+                  <div className="text-sm text-stone-700 font-chn leading-relaxed">{sosHelp.breakdown}</div>
+                </div>
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+                  <div className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1">💡 教練提示</div>
+                  <div className="text-sm text-stone-700 font-chn leading-relaxed">{sosHelp.hint}</div>
+                </div>
+                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between gap-3">
+                  <div className="flex-1">
+                    <div className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">✍️ 可以這樣說</div>
+                    <div className="text-sm font-bold text-emerald-900 font-eng">{sosHelp.example}</div>
+                    <div className="text-xs text-stone-400 mt-1">{sosHelp.example_chn}</div>
+                  </div>
+                  <button onClick={() => speakText(sosHelp.example)} className="shrink-0 w-10 h-10 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-full flex items-center justify-center transition">🔊</button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
