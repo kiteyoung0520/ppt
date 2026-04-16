@@ -26,10 +26,14 @@ export const GameProvider = ({ children }) => {
       try {
         await callApi('updateUserStats', {
           userId: currentUser,
-          stats: game.stats,
+          stats: {
+            ...game.stats,
+            streak: game.streak,
+            lastStudyDate: game.lastStudyDate
+          },
           savedWords: game.savedWords
         }, apiKey);
-        console.log("☁️ 語林雲端備份成功！");
+        console.log("☁️ 語林雲端備份成功 (含連勝紀錄)！");
       } catch (e) {
         console.warn("☁️ 備份延遲：", e.message);
       }
