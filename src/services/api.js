@@ -58,13 +58,10 @@ export async function callApi(action, params, apiKey = null, targetLangKey = 'en
 let sessionWinner = null; // 動態記錄本次對話中反應最快且成功的模型
 
 const MODEL_PRIORITY = [
-  "gemini-3.1-flash-lite",           // 首選：極速之王 (TTFT 領先 2.5 倍)
-  "gemini-3.1-flash-lite-preview",   // 預覽版備援
-  "gemini-3-flash",                 // 次選：148 tokens/sec 平衡型
-  "gemini-3-pro",                   // 進階：深度推理穩定版
-  "gemini-2.0-flash-exp",           // 2.0 實驗版備援
-  "gemini-1.5-flash-8b",            // 1.5 極速備援
-  "gemini-1.5-flash-latest"         // 最終底線
+  "gemini-3.1-flash-lite-preview",
+  "gemini-2.5-flash",
+  "gemini-2.5-pro",
+  "gemini-flash-latest"
 ];
 
 export async function* streamGeminiChat(prompt, apiKey) {
