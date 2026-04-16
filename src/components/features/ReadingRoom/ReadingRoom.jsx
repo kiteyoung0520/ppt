@@ -348,7 +348,8 @@ ${content}`;
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-stone-50 flex flex-col pt-10 px-4 md:px-20 pb-4">
+    <div className="fixed inset-0 z-50 bg-[#020817] text-stone-100 flex flex-col pt-10 px-4 md:px-20 pb-4 overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,_rgba(16,185,129,0.05)_0%,_transparent_50%)] pointer-events-none" />
       {/* Word Card Popup */}
       {selectedWord && (
         <WordCard
@@ -394,19 +395,21 @@ ${content}`;
           ref={scrollRef}
           onMouseUp={handleTextSelection}
           onTouchEnd={handleTextSelection}
-          className="w-full md:flex-[1.5] bg-white rounded-3xl shadow-sm p-6 shrink-0 md:shrink md:overflow-y-auto custom-scroll text-lg leading-loose font-eng border border-stone-200 select-text"
+          className="w-full md:flex-[1.5] bg-white/5 backdrop-blur-md rounded-3xl shadow-2xl p-6 shrink-0 md:shrink md:overflow-y-auto custom-scroll text-lg leading-loose font-eng border border-white/10 select-text text-stone-200"
         >
-          <div className="text-xs text-stone-400 mb-4 font-chn flex items-center gap-3">
-            <span>💡 <strong>點擊單字</strong>查詢意思與發音</span>
-            <span className="text-stone-300">｜</span>
-            <span>✍️ <strong>選取句子</strong>進行深度文法・語意・用法解析</span>
+          <div className="text-xs text-stone-500 mb-4 font-chn flex items-center gap-3 border-b border-white/5 pb-2">
+            <span className="flex items-center gap-1"><span className="text-emerald-400">💡</span> <strong>點擊單字</strong>查詢</span>
+            <span className="text-white/10">｜</span>
+            <span className="flex items-center gap-1"><span className="text-violet-400">✍️</span> <strong>選取句子</strong>深度解析</span>
           </div>
-          <ClickableText
-            text={content}
-            langCode={speechCode}
-            onWordClick={setSelectedWord}
-          />
-          {isStreaming && <span className="inline-block w-2 h-5 bg-orange-400 ml-1 animate-pulse"></span>}
+          <div className="article-content-wrapper">
+            <ClickableText
+              text={content}
+              langCode={speechCode}
+              onWordClick={setSelectedWord}
+            />
+          </div>
+          {isStreaming && <span className="inline-block w-2 h-5 bg-emerald-400 ml-1 animate-pulse"></span>}
         </div>
 
         {/* Side Panel */}
@@ -421,7 +424,7 @@ ${content}`;
             <div className="animate-popup-fade flex flex-col gap-4">
               {/* Translation */}
               <div>
-                <h3 className="font-bold text-stone-700 mb-2 font-chn border-l-4 border-emerald-500 pl-2 flex items-center justify-between">
+                <h3 className="font-bold text-stone-400 mb-2 font-chn border-l-4 border-emerald-500 pl-2 flex items-center justify-between">
                   全文翻譯（繁體中文）
                   <button
                     onClick={() => {
@@ -431,38 +434,38 @@ ${content}`;
                       u.rate = 1.0;
                       window.speechSynthesis.speak(u);
                     }}
-                    className="text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-2 py-0.5 rounded-full font-bold transition ml-2"
+                    className="text-[10px] bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 px-2 py-0.5 rounded-full font-bold transition ml-2"
                   >
                     🔊 朗讀
                   </button>
                 </h3>
-                <div className="bg-emerald-50/80 p-4 rounded-2xl text-sm leading-relaxed text-stone-700 font-chn">
+                <div className="bg-white/5 border border-white/10 p-4 rounded-2xl text-sm leading-relaxed text-stone-300 font-chn">
                   {metaData.translation}
                 </div>
               </div>
 
               {/* Vocabulary */}
               <div>
-                <h3 className="font-bold text-stone-700 mb-2 font-chn border-l-4 border-orange-500 pl-2">重點單字</h3>
+                <h3 className="font-bold text-stone-400 mb-2 font-chn border-l-4 border-orange-500 pl-2">重點單字</h3>
                 <div className="grid grid-cols-1 gap-3">
                   {metaData.vocab?.map((v, i) => (
                     <div
                       key={i}
-                      className="bg-white p-3 rounded-xl border border-stone-200 shadow-sm flex flex-col cursor-pointer hover:border-emerald-300 hover:shadow-md transition group"
+                      className="bg-white/5 p-3 rounded-xl border border-white/10 shadow-sm flex flex-col cursor-pointer hover:border-emerald-500/40 hover:bg-white/10 transition group"
                       onClick={() => setSelectedWord(v.word)}
                     >
-                      <div className="flex justify-between items-center border-b border-stone-100 pb-1 mb-1">
-                        <span className="font-bold text-orange-700 text-lg group-hover:text-emerald-700 transition">{v.word}</span>
+                      <div className="flex justify-between items-center border-b border-white/5 pb-1 mb-1">
+                        <span className="font-bold text-orange-400 text-lg group-hover:text-emerald-400 transition">{v.word}</span>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-stone-500 bg-stone-100 px-2 py-0.5 rounded">{v.phonetic}</span>
+                          <span className="text-[10px] text-stone-500 bg-black/20 px-2 py-0.5 rounded">{v.phonetic}</span>
                           <button
                             onClick={e => { e.stopPropagation(); const u = new SpeechSynthesisUtterance(v.word); u.lang = speechCode; u.rate = 0.85; window.speechSynthesis.cancel(); window.speechSynthesis.speak(u); }}
-                            className="text-emerald-500 hover:text-emerald-700 text-sm"
+                            className="text-emerald-400 hover:text-emerald-300 text-sm"
                             title="朗讀"
                           >🔊</button>
                         </div>
                       </div>
-                      <span className="text-stone-600 text-sm font-chn">{v.meaning}</span>
+                      <span className="text-stone-400 text-sm font-chn">{v.meaning}</span>
                     </div>
                   ))}
                 </div>
