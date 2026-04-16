@@ -6,6 +6,7 @@ import Fireflies from '../../ui/Fireflies';
 
 const AuthView = () => {
   const { login, apply, activate } = useAuth();
+  const { setStats } = useGame();
   const [tab, setTab] = useState('login'); // 'login', 'apply', 'activate'
   const [loading, setLoading] = useState(false);
 
@@ -26,6 +27,10 @@ const AuthView = () => {
         setTab('activate');
         toast("🛡️ 帳號核准通過！請輸入激活金鑰以開通溫室。");
       } else {
+        // 同步登入時抓到的雲端資產
+        if (res.stats) {
+          setStats(res.stats);
+        }
         toast(`🌿 歡迎回到植物園, ${userId}`);
       }
     } catch (e) {

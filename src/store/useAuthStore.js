@@ -31,7 +31,7 @@ export const useAuthStore = create(
             currentUser: userId, 
             apiKey: res.data.apiKey 
           });
-          return { success: true };
+          return { success: true, stats: res.data.stats };
         }
         throw new Error(res.message);
       },

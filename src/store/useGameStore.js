@@ -208,11 +208,20 @@ export const useGameStore = create(
       }),
 
       refreshStats: async (userId, apiKey) => {
-        if (!userId) return;
+        if (!userId || !apiKey) return;
         try {
           const res = await callApi('getUserStats', { userId }, apiKey);
-          if (res.status === 'success') {
-            set({ stats: { ...get().stats, ...res.data } });
+          if (res.status === 'success' && res.data) {
+            // 重要修復：正確拆解後端回傳的 stats 與 savedWords
+            const cloudStats = res.data.stats || {};
+            const cloudWords = Array.isArray(res.data.savedWords) ? res.data.savedWords : [];
+            
+            set((state) => ({ 
+              stats: { ...state.stats, ...cloudStats },
+              savedWords: cloudWords.length > 0 ? cloudWords : state.savedWords
+            }));
+            
+            console.log("Store: 雲端數據同步完成", cloudStats);
           }
         } catch (e) {
           console.error("Store: Failed to refresh stats:", e);

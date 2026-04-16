@@ -36,7 +36,8 @@ function doGet(e) {
 function handleLogin(payload) {
   var userId = payload.userId;
   var password = payload.password;
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Users");
   if (!sheet) return errorResponse("系統未設定 Users 表單");
 
   var finder = sheet.createTextFinder(userId).matchEntireCell(true).findNext();
@@ -45,7 +46,20 @@ function handleLogin(payload) {
     if (rowData[1] == password) {
       var apiKey = rowData[2]; 
       if (!apiKey) return successResponse({ needsActivation: true, userId: userId });
-      return successResponse({ apiKey: apiKey, userId: userId });
+      
+      // 修復：登入時直接抓取並回傳金幣等資料，防止歸零
+      var stats = { coins: 0, essence: { light: 0, rain: 0, soil: 0 }, unlockedPlants: [], streak: 0 };
+      var sSheet = ss.getSheetByName("UserStats");
+      if (sSheet) {
+        var f = sSheet.createTextFinder(userId).matchEntireCell(true).findNext();
+        if (f) {
+           try {
+             stats = JSON.parse(sSheet.getRange(f.getRow(), 2).getValue() || "{}");
+           } catch(e) {}
+        }
+      }
+      
+      return successResponse({ apiKey: apiKey, userId: userId, stats: stats });
     } else {
       return errorResponse("密碼錯誤");
     }
