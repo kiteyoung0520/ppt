@@ -199,29 +199,41 @@ function handleGetUserStats(payload) {
     if (f) {
       var r = f.getRow();
       var vals = sSheet.getRange(r, 1, 1, 11).getValues()[0];
-      // 依照截圖映射欄位
-      stats.coins = Number(vals[1] || 0);
-      stats.currentPlant = vals[2] || '黃花風鈴木';
-      stats.plantStage = Number(vals[3] || 0);
-      try {
-        // F欄是 UnlockedPlants，可能是 ["A","B"] 格式或 A,B 格式
-        var rawUnlocked = vals[5];
-        if (rawUnlocked && rawUnlocked.startsWith('[')) {
-          stats.unlockedPlants = JSON.parse(rawUnlocked);
-        } else {
-          stats.unlockedPlants = rawUnlocked ? String(rawUnlocked).split(',') : [];
-        }
-      } catch(e) { stats.unlockedPlants = []; }
-      
-      stats.exp = Number(vals[6] || 0);
-      
-      // K 欄 (Index 10) 存放精華與連勝資料 (JSON)
-      try {
-        var extra = JSON.parse(vals[10] || "{}");
-        stats.essence = extra.essence || {light:0, rain:0, soil:0};
-        stats.streak = extra.streak || 0;
-        stats.lastStudyDate = extra.lastStudyDate || null;
-      } catch(e) {}
+      var rawB = vals[1];
+      // 聰明讀取機制：檢查 B 欄是否為舊版的 JSON 格式
+      if (typeof rawB === 'string' && rawB.startsWith('{')) {
+        try {
+          var oldJson = JSON.parse(rawB);
+          stats.coins = Number(oldJson.coins || 0);
+          stats.currentPlant = oldJson.currentPlant || '黃花風鈴木';
+          stats.plantStage = Number(oldJson.plantStage || 0);
+          stats.exp = Number(oldJson.exp || 0);
+          stats.unlockedPlants = oldJson.unlockedPlants || [];
+          stats.essence = oldJson.essence || {light:0, rain:0, soil:0};
+          stats.streak = oldJson.streak || 0;
+          stats.lastStudyDate = oldJson.lastStudyDate || null;
+        } catch(e) { console.error("Old JSON parse failed"); }
+      } else {
+        // 新版欄位制 (B: Coins, C: Plant, D: Stage, F: Unlocked, G: Exp, K: Extra)
+        stats.coins = Number(vals[1] || 0);
+        stats.currentPlant = vals[2] || '黃花風鈴木';
+        stats.plantStage = Number(vals[3] || 0);
+        try {
+          var rawUnlocked = vals[5];
+          if (rawUnlocked && rawUnlocked.startsWith('[')) {
+            stats.unlockedPlants = JSON.parse(rawUnlocked);
+          } else {
+            stats.unlockedPlants = rawUnlocked ? String(rawUnlocked).split(',') : [];
+          }
+        } catch(e) { stats.unlockedPlants = []; }
+        stats.exp = Number(vals[6] || 0);
+        try {
+          var extra = JSON.parse(vals[10] || "{}");
+          stats.essence = extra.essence || {light:0, rain:0, soil:0};
+          stats.streak = extra.streak || 0;
+          stats.lastStudyDate = extra.lastStudyDate || null;
+        } catch(e) {}
+      }
     }
   }
 
