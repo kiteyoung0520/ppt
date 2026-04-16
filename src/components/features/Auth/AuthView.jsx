@@ -54,7 +54,7 @@ const AuthView = () => {
   };
 
   const handleActivate = async () => {
-    if (!licenseKey || !apiKey) return toast("請填寫激活金鑰與 Gemini API Key！");
+    if (!userId || !licenseKey || !apiKey) return toast("請填寫帳號、激活金鑰與 Gemini API Key！");
     setLoading(true);
     try {
       await activate(userId, licenseKey, apiKey);
@@ -154,11 +154,17 @@ const AuthView = () => {
         {tab === 'activate' && (
           <div className="text-center animate-fadeIn">
             <h1 className="text-2xl font-bold text-stone-800 mb-2">🔐 帳號激活</h1>
-            <p className="text-[11px] text-stone-500 mb-4 text-left leading-tight border-l-2 border-orange-400 pl-2">請輸入 Email 中的啟動金鑰與您的 Gemini API Key 以完成客製化溫室綁定。</p>
+            <p className="text-[11px] text-stone-500 mb-4 text-left leading-tight border-l-2 border-orange-400 pl-2">請輸入帳號、Email 中的啟動金鑰與您的 Gemini API Key 以完成客製化溫室綁定。</p>
+            <input 
+              type="text" 
+              value={userId} onChange={e => setUserId(e.target.value)}
+              className="w-full px-4 py-3 border border-stone-300 bg-white/90 rounded-xl mb-3 text-sm focus:ring-2 focus:ring-orange-400 outline-none text-stone-800" 
+              placeholder="園丁帳號" 
+            />
             <input 
               type="text" 
               value={licenseKey} onChange={e => setLicenseKey(e.target.value)}
-              className="w-full px-4 py-3 border-2 border-amber-300 bg-amber-50 rounded-xl mb-4 text-sm font-bold text-amber-800 outline-none" 
+              className="w-full px-4 py-3 border-2 border-amber-300 bg-amber-50 rounded-xl mb-3 text-sm font-bold text-amber-800 outline-none" 
               placeholder="🔑 輸入 Email 收到的啟動金鑰" 
             />
             <input 
