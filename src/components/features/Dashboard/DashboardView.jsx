@@ -325,10 +325,10 @@ const DashboardView = () => {
 
             <button
               onClick={() => { if (window.confirm('確定要離開語林之境嗎？')) logout(); }}
-              className="w-8 h-8 flex items-center justify-center bg-red-400/20 border border-red-400/30 text-base rounded-full hover:bg-red-400/30 transition"
+              className="flex items-center justify-center gap-1.5 bg-red-400/10 border border-red-400/20 text-red-200 px-3 py-1 rounded-full hover:bg-red-400/20 transition text-xs font-bold whitespace-nowrap"
               title="登出"
             >
-              🚪
+              登出
             </button>
           </div>
         </div>

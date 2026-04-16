@@ -125,23 +125,42 @@ function handleApply(payload) {
   if (!userId || !password || !email) return errorResponse("請填寫完整資訊");
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var appSheet = ss.getSheetByName("Applications") || ss.insertSheet("Applications");
-  
   var userSheet = ss.getSheetByName("Users");
   if (userSheet && userSheet.createTextFinder(userId).matchEntireCell(true).findNext()) {
     return errorResponse("園丁名稱已被佔用");
   }
 
-  appSheet.appendRow([userId, password, email, new Date(), "Pending", ""]);
+  // 💡 [全自動化路徑] 直接生成金鑰與開通帳號
+  var license = "LG-" + Math.floor(Math.random()*9000+1000) + "-" + Math.floor(Math.random()*9000+1000);
   
-  // 給管理員與申請者的通知
-  try {
-    var adminEmail = Session.getScriptOwner().getEmail();
-    MailApp.sendEmail(adminEmail, "[通知] 新的園丁申請", "園丁 " + userId + " 已送出入園申請。");
-    MailApp.sendEmail(email, "🌿 [語林之境] 申請已收到", "親愛的 " + userId + "，我們已收到您的申請，審核通過後會再次寄信給您。");
-  } catch(e) {}
+  // 1. 寫入 Users (A:UserID, B:Pass, C:ApiKey, D:RegDate, E:Devices, F:Expiry, G:Email)
+  if (userSheet) userSheet.appendRow([userId, password, "", new Date(), "", "", email]);
+  
+  // 2. 寫入 Licenses (A:UserID, B:LicenseKey)
+  var lSheet = ss.getSheetByName("Licenses") || ss.insertSheet("Licenses");
+  lSheet.appendRow([userId, license]);
+  
+  // 3. 寫入 UserStats (初始化資產)
+  var statsSheet = ss.getSheetByName("UserStats");
+  if (statsSheet) {
+    var extraJson = JSON.stringify({ essence: {light:0, rain:0, soil:0}, streak: 1, lastStudyDate: new Date().toDateString() });
+    statsSheet.appendRow([userId, 100, "黃花風鈴木", 0, 0, '["黃花風鈴木"]', 0, "[]", "[]", "{}", extraJson]);
+  }
+  
+  // 4. 寫入 Applications 記錄 (狀態直接設為 Auto-Approved)
+  var appSheet = ss.getSheetByName("Applications") || ss.insertSheet("Applications");
+  appSheet.appendRow([userId, password, email, new Date(), "Auto-Approved", license, "✅ 已自動發送"]);
 
-  return successResponse({ msg: "審核申請已送出！" });
+  // 5. 立即發送 Email
+  try {
+    var subject = "✨ [語林之境] 您的入園申請已自動核准！";
+    var body = "親愛的 " + userId + "：\n\n您的入園申請已自動通過！\n🔑 您的啟動金鑰：" + license + "\n\n請回到登入頁面進行激活。";
+    MailApp.sendEmail(email, subject, body);
+  } catch(e) {
+    console.error("Auto-Email failed: " + e.message);
+  }
+
+  return successResponse({ msg: "申請成功！請查看您的電子信箱獲取啟動金鑰。" });
 }
 
 function handleActivateAccount(payload) {
@@ -210,8 +229,14 @@ function onEdit(e) {
       }
 
       try {
-        var subject = "✨ [語林之境] 您的入園申請已核准";
-        var body = "親愛的 " + userId + "：\n\n您的入園申請已通過！\n🔑 啟動金鑰：" + license + "\n\n請回到登入頁面進行激活。";
+        var subject = "🌿 [語林之境] 您的園丁會籍即將到期（剩餘 5 天）";
+        var body = "親愛的 " + userId + "：\n\n您的語林之境 30 天探索權限即將在 5 天後到期。\n" +
+                   "為了維持 AI 育苗室與精華系統的運作，邀請您參與贊助續約：\n\n" +
+                   "💎 贊助金額：100 元\n" +
+                   "   (嘉義文教 50 元、嘉義分苑起厝 50 元)\n" +
+                   "📩 贊助方式：請洽嘉義分苑 或 聯繫 kiteyoung@gmail.com\n\n" +
+                   "完成後，管理員將為您延長會籍，讓我們繼續在語林中探索 AI 的奧秘！";
+        
         MailApp.sendEmail(email, subject, body);
         sheet.getRange(row, 7).setValue("✅ 已寄出");
       } catch(err) {

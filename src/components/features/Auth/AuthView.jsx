@@ -51,7 +51,7 @@ const AuthView = () => {
     setLoading(true);
     try {
       await apply(userId, password, email);
-      toast("✨ 申請已送出！管理員核准後將金鑰寄送至您的 Email。", 5000);
+      toast("✨ 申請成功！啟動金鑰已寄送至您的信箱，請查收並進行激活面板輸入。", 6000);
       setTab('login');
     } catch (e) {
       toast("❌ " + e.message);
@@ -129,7 +129,7 @@ const AuthView = () => {
         {tab === 'apply' && (
           <div className="text-center animate-fadeIn">
             <h1 className="text-2xl font-bold text-white mb-2">✨ 提出入園申請</h1>
-            <p className="text-[11px] text-stone-400 mb-4 text-left leading-tight border-l-2 border-emerald-400 pl-2">申請後請等待管理員核准，通過後啟動金鑰將寄送至您的信箱。</p>
+            <p className="text-[11px] text-stone-400 mb-4 text-left leading-tight border-l-2 border-emerald-400 pl-2">申請後系統將「自動核准」，並立即將啟動金鑰寄送至您的信箱，請確保 Email 填寫正確。</p>
             <input 
               type="text" 
               value={userId} onChange={e => setUserId(e.target.value)}
