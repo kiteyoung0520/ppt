@@ -236,8 +236,8 @@ ${articleContent.substring(0, 500)}`;
 // ── Main Reading Room ──────────────────────────────────────────────
 // pastedContent: optional pre-filled text (bypasses Gemini streaming)
 const ReadingRoom = ({ taskTitle, prompt, pastedContent, targetLangKey, onClose }) => {
-  const { apiKey } = useAuth();
-  const { recordActivity, addEssence } = useGame();
+  const { userId, apiKey } = useAuth();
+  const { recordActivity, addEssence, saveArticle } = useGame();
   const [content, setContent] = useState(pastedContent || '');
   const [isStreaming, setIsStreaming] = useState(!pastedContent);
   const [metaData, setMetaData] = useState(null);
@@ -367,6 +367,13 @@ ${content}`;
         <div className="flex gap-2 items-center">
           {!isStreaming && content && (
             <>
+              <button 
+                onClick={() => saveArticle(userId, apiKey, { title: taskTitle, content, langKey: targetLangKey })} 
+                className="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-700 font-bold text-sm rounded-full transition flex items-center gap-1" 
+                title="收藏文章"
+              >
+                🔖 收藏
+              </button>
               <button onClick={speakFullArticle} className="px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-bold text-sm rounded-full transition flex items-center gap-1" title="朗讀全文">
                 🔊 朗讀全文
               </button>

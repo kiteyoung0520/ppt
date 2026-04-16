@@ -83,6 +83,7 @@ export const useGameStore = create(
       streak: 0,
       lastStudyDate: null,
       savedWords: [], 
+      savedArticles: [],
 
       // --- Actions: Essence ---
       addEssence: (type, amount) => {
@@ -282,12 +283,53 @@ export const useGameStore = create(
           savedWords: get().savedWords.filter(w => !(w.word === word && w.langKey === langKey)) 
         });
       },
+      
+      // --- Actions: Articles ---
+      saveArticle: async (userId, apiKey, article) => {
+        const { savedArticles } = get();
+        if (savedArticles.find(a => a.id === article.id || (a.title === article.title && a.content === article.content))) {
+          toast("已收藏過這篇文章囉！");
+          return;
+        }
+        
+        try {
+          const res = await callApi('saveArticle', { 
+            userId, 
+            title: article.title, 
+            content: article.content, 
+            langKey: article.langKey,
+            id: article.id
+          }, apiKey);
+          
+          if (res.status === 'success') {
+            const newArt = { ...article, id: res.data.id, date: new Date() };
+            set({ savedArticles: [newArt, ...savedArticles] });
+            toast("✨ 文章已成功加入轉錄庫！");
+          }
+        } catch (e) {
+          console.error("Store: Failed to save article:", e);
+          toast("❌ 儲存文章失敗");
+        }
+      },
+
+      fetchSavedArticles: async (userId, apiKey) => {
+        if (!userId) return;
+        try {
+          const res = await callApi('getSavedArticles', { userId }, apiKey);
+          if (res.status === 'success') {
+            set({ savedArticles: res.data });
+          }
+        } catch (e) {
+          console.error("Store: Failed to fetch articles:", e);
+        }
+      },
 
       resetGameStore: () => set({
         stats: { coins: 0, exp: 0, plantStage: 0, currentPlant: '黃花風鈴木', unlockedPlants: [], expiryDate: null, essence: {light:0, rain:0, soil:0} },
         streak: 0,
         lastStudyDate: null,
-        savedWords: []
+        savedWords: [],
+        savedArticles: []
       })
     }),
     {

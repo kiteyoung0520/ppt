@@ -121,6 +121,19 @@ export const FEATURE_HELP = {
     ],
     tip: '🌟 點擊不同的分頁索引，查看你在各個學習領域的世界排名！'
   },
+  archive: {
+    title: '🔖 語林轉錄庫',
+    subtitle: 'Library — 已收藏文章重溫',
+    color: 'from-orange-900/80 to-amber-900/60',
+    border: 'border-orange-500/30',
+    steps: [
+      { icon: '💾', title: '收藏文章', desc: '在育苗室閱讀完感興趣的文章後，點擊「🔖 收藏」即可永久儲存' },
+      { icon: '📚', title: '歷史瀏覽', desc: '轉錄庫會記錄文章的標題、摘要、語言以及收藏時間' },
+      { icon: '🔄', title: '再次載入', desc: '點擊清單中的文章，即可重新啟動沉浸式閱讀模式（含點擊翻譯與發音）' },
+      { icon: '🗄️', title: '永久雲端化', desc: '所有文章均儲存在 Google Sheets 後端，更換設備也能續讀' },
+    ],
+    tip: '💡 對最喜歡的文章進行反覆朗讀和單字解析，是建立語感最快的方法！'
+  },
 };
 
 const FeatureHelpModal = ({ featureKey, onClose }) => {
