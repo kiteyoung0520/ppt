@@ -42,20 +42,55 @@ function handleLogin(payload) {
 
   var finder = sheet.createTextFinder(userId).matchEntireCell(true).findNext();
   if (finder) {
-    var rowData = sheet.getRange(finder.getRow(), 1, 1, 3).getValues()[0];
+    var row = finder.getRow();
+    var rowData = sheet.getRange(row, 1, 1, 6).getValues()[0]; // 讀到 F 欄
     if (rowData[1] == password) {
       var apiKey = rowData[2]; 
       if (!apiKey) return successResponse({ needsActivation: true, userId: userId });
       
+      // 💡 檢查到期日 (F 欄)
+      var expiryDate = rowData[5];
+      if (expiryDate) {
+        var now = new Date();
+        if (now > new Date(expiryDate)) {
+          return errorResponse("⚠️ 您的會籍已到期 (" + Utilities.formatDate(new Date(expiryDate), "GMT+8", "yyyy-MM-dd") + ")\n\n" +
+                               "【續約贊助方案】\n" +
+                               "💸 贊助 100 元 (含嘉義文教 50 元、嘉義分苑起厝 50 元)\n" +
+                               "📩 贊助方式：請洽嘉義分苑或 kiteyoung@gmail.com");
+        }
+      }
+      
       // 修復：登入時直接抓取並回傳金幣等資料，防止歸零
-      var stats = { coins: 0, essence: { light: 0, rain: 0, soil: 0 }, unlockedPlants: [], streak: 0 };
+      var stats = { coins: 0, currentPlant: '黃花風鈴木', plantStage: 0, unlockedPlants: [], exp: 0, essence: {light:0, rain:0, soil:0}, streak: 0 };
       var sSheet = ss.getSheetByName("UserStats");
       if (sSheet) {
         var f = sSheet.createTextFinder(userId).matchEntireCell(true).findNext();
         if (f) {
-           try {
-             stats = JSON.parse(sSheet.getRange(f.getRow(), 2).getValue() || "{}");
-           } catch(e) {}
+          var r = f.getRow();
+          var vals = sSheet.getRange(r, 1, 1, 11).getValues()[0];
+          var rawB = vals[1];
+          if (typeof rawB === 'string' && rawB.startsWith('{')) {
+            try {
+              var oldJson = JSON.parse(rawB);
+              stats.coins = Number(oldJson.coins || 0);
+              stats.currentPlant = oldJson.currentPlant || '黃花風鈴木';
+              stats.plantStage = Number(oldJson.plantStage || 0);
+              stats.exp = Number(oldJson.exp || 0);
+              stats.unlockedPlants = oldJson.unlockedPlants || [];
+              stats.essence = oldJson.essence || {light:0, rain:0, soil:0};
+              stats.streak = oldJson.streak || 0;
+            } catch(e) {}
+          } else {
+            stats.coins = Number(vals[1] || 0);
+            stats.currentPlant = vals[2] || '黃花風鈴木';
+            stats.plantStage = Number(vals[3] || 0);
+            stats.exp = Number(vals[6] || 0);
+            try {
+              var extra = JSON.parse(vals[10] || "{}");
+              stats.essence = extra.essence || {light:0, rain:0, soil:0};
+              stats.streak = extra.streak || 0;
+            } catch(e) {}
+          }
         }
       }
       
@@ -127,8 +162,15 @@ function handleActivateAccount(payload) {
   if (!finder) return errorResponse("帳號異常");
   
   var row = finder.getRow();
+  
+  // 💡 設定會籍到期日：今天 + 30 天
+  var expiryDate = new Date();
+  expiryDate.setDate(expiryDate.getDate() + 30);
+  
   userSheet.getRange(row, 3).setValue(userApiKey); 
-  return successResponse({ apiKey: userApiKey, userId: userId });
+  userSheet.getRange(row, 6).setValue(expiryDate); // 寫入 F 欄
+  
+  return successResponse({ apiKey: userApiKey, userId: userId, expiryDate: expiryDate });
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -151,9 +193,9 @@ function onEdit(e) {
 
       var ss = e.source;
       
-      // 1. 寫入 Users (A:UserID, B:Pass, C:ApiKey, D:RegDate, E:Devices, F:Expiry)
+      // 1. 寫入 Users (A:UserID, B:Pass, C:ApiKey, D:RegDate, E:Devices, F:Expiry, G:Email)
       var userSheet = ss.getSheetByName("Users");
-      if (userSheet) userSheet.appendRow([userId, password, "", new Date(), "", ""]);
+      if (userSheet) userSheet.appendRow([userId, password, "", new Date(), "", "", email]);
       
       // 2. 寫入 Licenses (A:UserID, B:LicenseKey)
       var lSheet = ss.getSheetByName("Licenses") || ss.insertSheet("Licenses");
@@ -354,4 +396,50 @@ function forceAuthorizeEmail() {
   var myEmail = Session.getActiveUser().getEmail();
   MailApp.sendEmail(myEmail, "🔒 權限開通", "發信功能已解鎖！");
   Logger.log("權限已開通");
+}
+
+/**
+ * 💡 每日檢查會籍是否到期
+ * 建議在 GAS 編輯器設定「時間驅動計時器 (每日)」
+ */
+function dailyExpiryCheck() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var userSheet = ss.getSheetByName("Users");
+  if (!userSheet) return;
+  
+  var data = userSheet.getDataRange().getValues();
+  var now = new Date();
+  
+  // 計算「5天後」的整點日期（方便比對）
+  var fiveDaysLater = new Date();
+  fiveDaysLater.setDate(now.getDate() + 5);
+  var checkStr = Utilities.formatDate(fiveDaysLater, "GMT+8", "yyyyMMdd");
+  
+  for (var i = 1; i < data.length; i++) {
+    var userId = data[i][0];
+    var expiryDate = data[i][5];
+    var email = data[i][6]; // G 欄獲取 Email
+    
+    if (expiryDate instanceof Date && email) {
+      var expiryStr = Utilities.formatDate(expiryDate, "GMT+8", "yyyyMMdd");
+      
+      // 💡 正好剩 5 天時寄信
+      if (expiryStr === checkStr) {
+        try {
+          var subject = "🔔 [語林之境] 會籍到期提醒 (剩餘 5 天)";
+          var body = "親愛的培育者 " + userId + "：\n\n" +
+                     "您的語林之境會籍即將於 " + Utilities.formatDate(expiryDate, "GMT+8", "yyyy-MM-dd") + " 到期。\n\n" +
+                     "為了讓您的守護靈能持續成長，我們誠摯邀請您參與贊助方案：\n" +
+                     "💸 贊助 100 元 (含嘉義文教 50 元、嘉義分苑起厝 50 元)\n" +
+                     "📩 贊助方式：請洽嘉義分苑或 kiteyoung@gmail.com\n\n" +
+                     "感謝您對語林的守護！🌿✨";
+          
+          MailApp.sendEmail(email, subject, body);
+          Logger.log("已寄送提醒信給: " + userId);
+        } catch(e) {
+          Logger.log("寄信失敗 (" + userId + "): " + e.message);
+        }
+      }
+    }
+  }
 }
