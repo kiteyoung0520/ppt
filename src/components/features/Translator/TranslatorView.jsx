@@ -28,6 +28,10 @@ const TranslatorView = () => {
       toast("❌ 您的瀏覽器不支援語音辨識！");
       return null;
     }
+    if (!currentLang || !currentLang.speechCode) {
+      toast("⏳ 正在讀取語言設定，請稍後...");
+      return null;
+    }
     const rec = new SpeechRecognition();
     rec.continuous = false;
     rec.interimResults = true;

@@ -92,17 +92,13 @@ export async function* streamGeminiChat(prompt, apiKey) {
 
       clearTimeout(timeoutId);
 
-      // 如果 429 或 500+，或是 401/403 權限問題，立即跳下一個模型
-      if (response.status === 401 || response.status === 403 || response.status === 429 || response.status >= 500) {
-        console.warn(`[自動切換] ${modelName} 暫不可用 (${response.status})，改試下一個...`);
-        // 如果 sessionWinner 失敗了，清除它，重新尋找新的最快模型
-        if (modelName === sessionWinner) sessionWinner = null;
-        continue;
-      }
-
+      // 強力修復：不論任何 HTTP 錯誤 (400, 401, 404, 429, 500+)，全部觸發秒切換
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
+        console.warn(`[自動切換] ${modelName} 回報錯誤 (${response.status})，即將嘗試下一個模型...`);
+        // 如果是內容安全攔截 (通常回報 400)，我們依然嘗試換個模型試試看
+        if (modelName === sessionWinner) sessionWinner = null;
+        continue;
       }
 
       const reader = response.body.getReader();
