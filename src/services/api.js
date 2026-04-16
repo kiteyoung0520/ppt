@@ -56,10 +56,13 @@ export async function callApi(action, params, apiKey = null, targetLangKey = 'en
 }
 
 const MODEL_PRIORITY = [
-  "gemini-3.1-flash-lite-preview",
-  "gemini-2.5-flash",
-  "gemini-2.5-pro",
-  "gemini-flash-latest"
+  "gemini-1.5-flash-8b",            // 地表最快：8B 極速版
+  "gemini-3.1-flash-lite-preview", // 你指定的 3.1 輕量版
+  "gemini-2.0-flash-lite",          // 2.0 輕量備援
+  "gemini-2.5-flash",              // 2.5 快閃版
+  "gemini-2.5-pro",                // 2.5 專業版
+  "gemini-1.5-flash-latest",       // 穩定快閃版
+  "gemini-1.5-pro-latest"          // 穩定專業版 (最後備援)
 ];
 
 export async function* streamGeminiChat(prompt, apiKey) {
