@@ -82,9 +82,9 @@ export async function* streamGeminiChat(prompt, apiKey) {
 
       clearTimeout(timeoutId);
 
-      // 如果模型繁忙 (429) 或 伺服器錯誤 (500/503)，立即切換下一個模型
-      if (response.status === 429 || response.status >= 500) {
-        console.warn(`[AI] ${modelName} 繁忙或錯誤 (${response.status})，秒切換至下一個模型...`);
+      // 如果模型繁忙 (429)、伺服器錯誤 (500+)、或權限不足 (401/403)，立即切換下一個模型
+      if (response.status === 401 || response.status === 403 || response.status === 429 || response.status >= 500) {
+        console.warn(`[AI] ${modelName} 無權限、繁忙或錯誤 (${response.status})，秒切換至下一個模型...`);
         continue;
       }
 
