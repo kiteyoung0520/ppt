@@ -14,7 +14,7 @@ export async function callApi(action, params, apiKey = null, targetLangKey = 'en
   const cacheKey = `${action}_${JSON.stringify(params)}_${targetLangKey}`;
   
   // Check cache for specific actions (like getting quotes)
-  if (action === 'getRandomQuote' && apiCache.has(cacheKey)) {
+  if ((action === 'getRandomQuote' || action === 'getLeaderboard') && apiCache.has(cacheKey)) {
     const cached = apiCache.get(cacheKey);
     if (Date.now() - cached.time < CACHE_TTL) return cached.data;
   }
@@ -42,7 +42,7 @@ export async function callApi(action, params, apiKey = null, targetLangKey = 'en
     if (json.status === 'error') throw new Error(json.message);
 
     // Save to cache if applicable
-    if (action === 'getRandomQuote') {
+    if (action === 'getRandomQuote' || action === 'getLeaderboard') {
       apiCache.set(cacheKey, { data: json, time: Date.now() });
     }
 

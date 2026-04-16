@@ -31,6 +31,8 @@ function doPost(e) {
         return handleGetRandomQuote(payload);
       case 'register':
         return handleRegister(payload);
+      case 'getLeaderboard':
+        return handleGetLeaderboard(payload);
       default:
         return errorResponse("未知的 API Action: " + action);
     }
@@ -166,7 +168,79 @@ function handleUpdateUserStats(payload) {
     sheet.getRange(rowIndex, 5).setValue(JSON.stringify(payload.savedWords));
   }
 
+  if (payload.stats) {
+    // 同步更新排行榜背景數據
+    var statsObj = payload.stats;
+    var savedWordsArr = payload.savedWords || [];
+    try {
+      updateLeaderboard(payload.userId, statsObj, savedWordsArr.length);
+    } catch (e) {
+      console.warn("Leaderboard update failed: " + e.message);
+    }
+  }
+
   return successResponse({ updated: true });
+}
+
+/**
+ * 取得排行榜資料 (前 20 名)
+ */
+function handleGetLeaderboard() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Leaderboard");
+  if (!sheet) return successResponse([]);
+
+  var data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return successResponse([]);
+
+  // 轉換並去識別化
+  var players = data.slice(1).map(function(row) {
+    var rawName = String(row[0]);
+    var maskedName = rawName.length > 2 
+      ? rawName.substring(0, 1) + "***" + rawName.substring(rawName.length - 1)
+      : rawName + "**";
+      
+    return {
+      name: maskedName,
+      streak: parseInt(row[1]) || 0,
+      essence: parseInt(row[2]) || 0,
+      plants: parseInt(row[3]) || 0,
+      vocab: parseInt(row[4]) || 0
+    };
+  });
+
+  return successResponse(players);
+}
+
+/**
+ * 內部工具：同步排行榜數據
+ */
+function updateLeaderboard(userId, stats, vocabCount) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Leaderboard");
+  if (!sheet) {
+    sheet = ss.insertSheet("Leaderboard");
+    sheet.appendRow(["userId", "streak", "totalEssence", "plantCount", "vocabCount", "lastUpdate"]);
+  }
+
+  var data = sheet.getDataRange().getValues();
+  var rowIndex = -1;
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] == userId) {
+      rowIndex = i + 1;
+      break;
+    }
+  }
+
+  var totalEssence = (stats.essence?.light || 0) + (stats.essence?.rain || 0) + (stats.essence?.soil || 0);
+  var plantCount = Array.isArray(stats.unlockedPlants) ? stats.unlockedPlants.length : 0;
+  var rowValues = [userId, stats.streak || 0, totalEssence, plantCount, vocabCount, new Date()];
+
+  if (rowIndex != -1) {
+    sheet.getRange(rowIndex, 1, 1, 6).setValues([rowValues]);
+  } else {
+    sheet.appendRow(rowValues);
+  }
 }
 
 /**

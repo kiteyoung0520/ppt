@@ -108,6 +108,19 @@ export const FEATURE_HELP = {
     ],
     tip: '📚 每完成一種守護靈的生態故事閱讀，回來試鍊時對應題目的正確率會大幅提升！'
   },
+  rank: {
+    title: '🏆 語林英雄榜',
+    subtitle: 'Leaderboard — 尋語者排行',
+    color: 'from-amber-900/80 to-yellow-900/60',
+    border: 'border-amber-500/30',
+    steps: [
+      { icon: '📊', title: '三大榜單', desc: '恆心榜（連勝）、博學榜（精華總量）、博物榜（解鎖植物數）' },
+      { icon: '💧', title: '甘露祝福', desc: '點擊玩家右方的 💧 圖示送出祝福，鼓勵對方的同時也能獲得日光精華' },
+      { icon: '🏆', title: '榮譽獎勵', desc: '前三名尋語者擁有動態特效與專屬頭像框，展現守護靈主人的強大氣場' },
+      { icon: '🔄', title: '即時更新', desc: '每次完成學習活動或登入，您的數據都會自動同步至排行榜' },
+    ],
+    tip: '🌟 點擊不同的分頁索引，查看你在各個學習領域的世界排名！'
+  },
 };
 
 const FeatureHelpModal = ({ featureKey, onClose }) => {
