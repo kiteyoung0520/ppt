@@ -240,13 +240,13 @@ const DashboardView = () => {
   }
 
   return (
-    <div className="w-full min-h-[100dvh] bg-[#0f172a] relative flex items-center justify-center p-0 lg:p-6 overflow-hidden">
+    <div className="w-full min-h-screen bg-[#0f172a] relative flex items-center justify-center p-0 lg:p-6 overflow-hidden">
       <GreenhouseModal isOpen={isGreenhouseOpen} onClose={() => setIsGreenhouseOpen(false)} />
       {showEssenceGuide && <EssenceGuideModal onClose={() => setShowEssenceGuide(false)} />}
       {showHelp && activeView && <FeatureHelpModal featureKey={activeView} onClose={() => setShowHelp(false)} />}
       {showOnboarding && <OnboardingModal onComplete={() => setShowOnboarding(false)} />}
 
-      <div className="relative w-full flex flex-col premium-glass max-w-none lg:max-w-7xl h-[100dvh] lg:h-[90dvh] p-0 overflow-hidden lg:rounded-3xl">
+      <div className="relative w-full flex flex-col premium-glass max-w-none lg:max-w-7xl h-screen lg:h-[90dvh] p-0 overflow-hidden lg:rounded-3xl">
 
         {/* ── Top HUD ─────────────────────────────────────────────── */}
         <div className="shrink-0 flex items-center px-3 sm:px-5 py-2.5 border-b border-white/10 gap-2 bg-black/20 backdrop-blur-sm">

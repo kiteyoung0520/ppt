@@ -12,7 +12,7 @@ const MainApp = () => {
 
   if (loading) {
     return (
-      <div className="w-full h-[100dvh] text-white bg-[#020817] flex flex-col items-center justify-center font-chn relative overflow-hidden">
+      <div className="w-full h-screen text-white bg-[#020817] flex flex-col items-center justify-center font-chn relative overflow-hidden">
          <Fireflies count={15} />
          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(16,185,129,0.1)_0%,_transparent_60%)] pointer-events-none"></div>
          <div className="relative z-10 text-7xl mb-6 drop-shadow-[0_0_20px_rgba(16,185,129,0.5)] animate-pulse">🌳</div>
@@ -25,7 +25,7 @@ const MainApp = () => {
   }
 
   return (
-    <div className="w-full h-full text-stone-800">
+    <div className="w-full min-h-screen bg-[#0f172a] text-stone-100 overflow-hidden">
       <Toast />
       {!currentUser ? (
         <AuthView />

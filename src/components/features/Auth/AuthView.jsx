@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
+import { useGame } from '../../../context/GameContext';
 import GlassPanel from '../../ui/GlassPanel';
 import { toast } from '../../ui/Toast';
 import Fireflies from '../../ui/Fireflies';
@@ -102,18 +103,18 @@ const AuthView = () => {
 
         {tab === 'login' && (
           <div className="text-center animate-fadeIn">
-            <h1 className="text-2xl font-bold text-stone-800 mb-2">🌿 歡迎回到植物園</h1>
-            <p className="text-stone-500 text-xs mb-6 font-bold">請輸入園丁證件以同步溫室</p>
+            <h1 className="text-2xl font-bold text-white mb-2">🌿 歡迎回到植物園</h1>
+            <p className="text-stone-400 text-xs mb-6 font-bold">請輸入園丁證件以同步溫室</p>
             <input 
               type="text" 
               value={userId} onChange={e => setUserId(e.target.value)}
-              className="w-full px-4 py-3 border border-stone-300 rounded-xl mb-3 text-sm focus:ring-2 focus:ring-orange-400 outline-none bg-white/90 text-stone-800" 
+              className="w-full px-4 py-3 border border-white/10 rounded-xl mb-3 text-sm focus:ring-2 focus:ring-emerald-400 outline-none bg-black/40 text-white" 
               placeholder="園丁名稱 (帳號)" 
             />
             <input 
               type="password" 
               value={password} onChange={e => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-stone-300 rounded-xl mb-6 text-sm focus:ring-2 focus:ring-orange-400 outline-none bg-white/90 text-stone-800" 
+              className="w-full px-4 py-3 border border-white/10 rounded-xl mb-6 text-sm focus:ring-2 focus:ring-emerald-400 outline-none bg-black/40 text-white" 
               placeholder="密碼" 
             />
             <button 
@@ -127,24 +128,24 @@ const AuthView = () => {
 
         {tab === 'apply' && (
           <div className="text-center animate-fadeIn">
-            <h1 className="text-2xl font-bold text-stone-800 mb-2">✨ 提出入園申請</h1>
-            <p className="text-[11px] text-stone-500 mb-4 text-left leading-tight border-l-2 border-orange-400 pl-2">申請後請等待管理員核准，通過後啟動金鑰將寄送至您的信箱。</p>
+            <h1 className="text-2xl font-bold text-white mb-2">✨ 提出入園申請</h1>
+            <p className="text-[11px] text-stone-400 mb-4 text-left leading-tight border-l-2 border-emerald-400 pl-2">申請後請等待管理員核准，通過後啟動金鑰將寄送至您的信箱。</p>
             <input 
               type="text" 
               value={userId} onChange={e => setUserId(e.target.value)}
-              className="w-full px-4 py-3 border border-stone-300 bg-white/90 rounded-xl mb-3 text-sm focus:ring-2 focus:ring-orange-400 outline-none text-stone-800" 
+              className="w-full px-4 py-3 border border-white/10 bg-black/40 rounded-xl mb-3 text-sm focus:ring-2 focus:ring-emerald-400 outline-none text-white" 
               placeholder="想使用的園丁名稱" 
             />
             <input 
               type="password" 
               value={password} onChange={e => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-stone-300 bg-white/90 rounded-xl mb-3 text-sm focus:ring-2 focus:ring-orange-400 outline-none text-stone-800" 
+              className="w-full px-4 py-3 border border-white/10 bg-black/40 rounded-xl mb-3 text-sm focus:ring-2 focus:ring-emerald-400 outline-none text-white" 
               placeholder="設定登入密碼" 
             />
             <input 
               type="email" 
               value={email} onChange={e => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-stone-300 bg-white/90 rounded-xl mb-6 text-sm focus:ring-2 focus:ring-orange-400 outline-none text-stone-800" 
+              className="w-full px-4 py-3 border border-white/10 bg-black/40 rounded-xl mb-6 text-sm focus:ring-2 focus:ring-emerald-400 outline-none text-white" 
               placeholder="您的電子郵件 (接收金鑰用)" 
             />
             <button 
@@ -158,27 +159,27 @@ const AuthView = () => {
 
         {tab === 'activate' && (
           <div className="text-center animate-fadeIn">
-            <h1 className="text-2xl font-bold text-stone-800 mb-2">🔐 帳號激活</h1>
-            <p className="text-[11px] text-stone-500 mb-4 text-left leading-tight border-l-2 border-orange-400 pl-2">請輸入帳號、Email 中的啟動金鑰與您的 Gemini API Key 以完成客製化溫室綁定。</p>
+            <h1 className="text-2xl font-bold text-white mb-2">🔐 帳號激活</h1>
+            <p className="text-[11px] text-stone-400 mb-4 text-left leading-tight border-l-2 border-emerald-400 pl-2">請輸入帳號、Email 中的啟動金鑰與您的 Gemini API Key 以完成客製化溫室綁定。</p>
             <input 
               type="text" 
               value={userId} onChange={e => setUserId(e.target.value)}
-              className="w-full px-4 py-3 border border-stone-300 bg-white/90 rounded-xl mb-3 text-sm focus:ring-2 focus:ring-orange-400 outline-none text-stone-800" 
+              className="w-full px-4 py-3 border border-white/10 bg-black/40 rounded-xl mb-3 text-sm focus:ring-2 focus:ring-emerald-400 outline-none text-white" 
               placeholder="園丁帳號" 
             />
             <input 
               type="text" 
               value={licenseKey} onChange={e => setLicenseKey(e.target.value)}
-              className="w-full px-4 py-3 border-2 border-amber-300 bg-amber-50 rounded-xl mb-3 text-sm font-bold text-amber-800 outline-none" 
+              className="w-full px-4 py-3 border-2 border-amber-400/50 bg-amber-400/10 rounded-xl mb-3 text-sm font-bold text-amber-200 outline-none" 
               placeholder="🔑 輸入 Email 收到的啟動金鑰" 
             />
             <input 
               type="password" 
               value={apiKey} onChange={e => setApiKey(e.target.value)}
-              className="w-full px-4 py-3 border border-stone-300 bg-white/90 rounded-xl mb-1 text-sm focus:ring-2 focus:ring-orange-400 outline-none text-stone-800" 
+              className="w-full px-4 py-3 border border-white/10 bg-black/40 rounded-xl mb-1 text-sm focus:ring-2 focus:ring-emerald-400 outline-none text-white" 
               placeholder="貼上您的 Gemini API Key" 
             />
-            <a href="https://aistudio.google.com/" target="_blank" rel="noreferrer" className="block text-[10px] text-orange-500 hover:text-orange-700 hover:underline mb-5 text-right font-bold transition">👉 免費申請 AI 金鑰</a>
+            <a href="https://aistudio.google.com/" target="_blank" rel="noreferrer" className="block text-[10px] text-emerald-400 hover:text-emerald-300 hover:underline mb-5 text-right font-bold transition">👉 免費申請 AI 金鑰</a>
             <button 
               onClick={handleActivate} disabled={loading}
               className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl shadow-md transition transform active:scale-95 border border-orange-600 disabled:opacity-75"
