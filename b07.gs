@@ -10,10 +10,11 @@
  * 
  * 必備試算表標籤頁 (Sheets):
  * 1. "Users" - 欄位: A:UserID, B:Password, C:APIKey, D:RegisterDate, E:Devices, F:ExpiryDate
- * 2. "UserStats" - 欄位: A:UserID, B:StatsJSON
- * 3. "WordBank" - 欄位: A:UserID, B:Word, C:IPA, D:Definition, E:Context, F:ContextChn, G:Date, H:ID, I:MetadataJSON
- * 4. "ArticleBank" - 欄位: A:UserID, B:Title, C:Content, D:LangKey, E:Date, F:ID
- * 5. "Quotes" - 欄位: A:ID, B:Author, C:English, D:Chinese
+ * 2. "Applications" - 欄位: A:UserID, B:Password, C:Email, D:Date, E:Status(Pending/Approved), F:LicenseKey
+ * 3. "UserStats" - 欄位: A:UserID, B:StatsJSON
+ * 4. "WordBank" - 欄位: A:UserID, B:Word, C:IPA, D:Definition, E:Context, F:ContextChn, G:Date, H:ID, I:MetadataJSON
+ * 5. "ArticleBank" - 欄位: A:UserID, B:Title, C:Content, D:LangKey, E:Date, F:ID
+ * 6. "Quotes" - 欄位: A:ID, B:Author, C:English, D:Chinese
  */
 
 function doPost(e) {
@@ -33,13 +34,15 @@ function doPost(e) {
       case 'getRandomQuote':
         return handleGetRandomQuote(payload);
       case 'register':
-        return handleRegister(payload);
+        return handleApply(payload); // 註冊改為申請
       case 'getLeaderboard':
         return handleGetLeaderboard(payload);
       case 'saveArticle':
         return handleSaveArticle(payload);
       case 'getSavedArticles':
         return handleGetSavedArticles(payload);
+      case 'activateAccount':
+        return handleActivateAccount(payload);
       default:
         return errorResponse("未知的 API Action: " + action);
     }
@@ -73,23 +76,21 @@ function handleLogin(payload) {
   if (!sheet) return errorResponse("系統未設定 Users 表單");
 
   var data = sheet.getDataRange().getValues();
-  // 假設第一行是標題，跳過第一行
-  for (var i = 1; i < data.length; i++) {
-    var storedUser = data[i][0];
-    var storedPass = data[i][1];
+  var finder = sheet.createTextFinder(userId).matchEntireCell(true).findNext();
+  if (finder) {
+    var rowIndex = finder.getRow();
+    var rowData = sheet.getRange(rowIndex, 1, 1, 3).getValues()[0];
+    var storedPass = rowData[1];
 
-    if (storedUser == userId) {
-      if (storedPass == password) {
-        var apiKey = data[i][2]; 
-        // 確保每個帳號都有 apiKey，若無則生成一個
-        if (!apiKey) {
-          apiKey = Utilities.getUuid();
-          sheet.getRange(i + 1, 3).setValue(apiKey);
-        }
-        return successResponse({ apiKey: apiKey, userId: userId });
-      } else {
-        return errorResponse("密碼錯誤");
+    if (storedPass == password) {
+      var apiKey = rowData[2]; 
+      // 若無 APIKey 表示尚未激活
+      if (!apiKey) {
+        return successResponse({ needsActivation: true, userId: userId });
       }
+      return successResponse({ apiKey: apiKey, userId: userId });
+    } else {
+      return errorResponse("密碼錯誤");
     }
   }
   
@@ -97,46 +98,105 @@ function handleLogin(payload) {
 }
 
 /**
- * 處理註冊 (開通)
- * @param {Object} payload 包含 userId, password, userApiKey, licenseKey
+ * 處理入園申請 (新版審核制)
  */
-function handleRegister(payload) {
+function handleApply(payload) {
   var userId = payload.userId;
   var password = payload.password;
-  var userApiKey = payload.userApiKey; // 這是使用者提供的 Gemini API Key
+  var email = payload.email;
+
+  if (!userId || !password || !email) return errorResponse("請填寫完整資訊");
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var appSheet = ss.getSheetByName("Applications");
+  if (!appSheet) {
+    appSheet = ss.insertSheet("Applications");
+    appSheet.appendRow(["UserID", "Password", "Email", "Date", "Status", "LicenseKey"]);
+  }
+
+  // 檢查是否重複申請或已存在
+  var userSheet = ss.getSheetByName("Users");
+  if (userSheet && userSheet.createTextFinder(userId).matchEntireCell(true).findNext()) {
+    return errorResponse("園丁名稱已被佔用或已存在");
+  }
+
+  appSheet.appendRow([userId, password, email, new Date(), "Pending", ""]);
+  
+  // 通知管理員
+  try {
+    MailApp.sendEmail(Session.getEffectiveUser().getEmail(), 
+      "[系統通知] 語林之境：收到新的園丁入園申請", 
+      "園丁 " + userId + " (" + email + ") 已送出申請。請前往試算表審核並核發金鑰。");
+  } catch(e) {}
+
+  return successResponse({ msg: "申請已送出！管理員核准後將寄發金鑰至您的電子郵件。" });
+}
+
+/**
+ * 處理帳號激活 (第一次登入填入金鑰)
+ */
+function handleActivateAccount(payload) {
+  var userId = payload.userId;
   var licenseKey = payload.licenseKey;
+  var userApiKey = payload.userApiKey; // Gemini Key
 
-  if (!userId || !password || !userApiKey || !licenseKey) {
-    return errorResponse("資料不完整，請填寫所有欄位");
-  }
-
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
-  if (!sheet) return errorResponse("系統未設定 Users 表單");
-
-  var data = sheet.getDataRange().getValues();
-  for (var i = 1; i < data.length; i++) {
-    if (data[i][0] == userId) {
-      return errorResponse("此園丁名稱已存在，請換一個名字");
-    }
-  }
-
-  var defaultStats = JSON.stringify({
-    coins: 100,
-    streak: 1,
-    essence: { light: 0, rain: 0, soil: 0 },
-    unlockedPlants: []
-  });
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var userSheet = ss.getSheetByName("Users");
   
-  // 寫入 Users 表
-  sheet.appendRow([userId, password, userApiKey, new Date(), "[]", ""]);
+  var finder = userSheet.createTextFinder(userId).matchEntireCell(true).findNext();
+  if (!finder) return errorResponse("帳號不存在");
   
-  // 初始化 UserStats 表
-  var statsSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("UserStats");
-  if (statsSheet) {
+  var rowIndex = finder.getRow();
+  var rowData = userSheet.getRange(rowIndex, 1, 1, 6).getValues()[0];
+  
+  // 比對 LicenseKey (存放在原本 sheet 的 RegisterDate 欄位或是自訂比對)
+  // 此處邏輯：核准時會將生成的 LicenseKey 存入 Users 表的暫存位置或直接在前端比對
+  // 簡化方案：核准時會將 User 新增到 Users 表但 C 欄為空，D 欄存放生成的 LicenseKey
+  if (rowData[3] != licenseKey) return errorResponse("金鑰不正確，請檢查 Email。");
+
+  // 正式寫入 API Key 並標記激活
+  userSheet.getRange(rowIndex, 3).setValue(userApiKey); 
+  
+  return successResponse({ apiKey: userApiKey, userId: userId });
+}
+
+/**
+ * 自動化核准器 (當管理員在試算表編輯時)
+ */
+function onEdit(e) {
+  var sheet = e.source.getActiveSheet();
+  var range = e.range;
+  
+  // 假設 Applications 表第五欄 (E) 是手動手寫 "Approved"
+  if (sheet.getName() == "Applications" && range.getColumn() == 5 && e.value == "Approved") {
+    var row = range.getRow();
+    var data = sheet.getRange(row, 1, 1, 4).getValues()[0];
+    var userId = data[0];
+    var password = data[1];
+    var email = data[2];
+    
+    // 產生隨機金鑰 (8碼)
+    var license = "LG-" + Math.floor(Math.random() * 9000 + 1000) + "-" + Math.floor(Math.random() * 9000 + 1000);
+    sheet.getRange(row, 6).setValue(license); // 填入 F 欄
+    
+    // 加入正式 Users 表 (D 欄暫存金鑰，C 欄為空等待激活)
+    var userSheet = e.source.getSheetByName("Users");
+    userSheet.appendRow([userId, password, "", license, "[]", ""]);
+
+    // 初始化 UserStats
+    var statsSheet = e.source.getSheetByName("UserStats");
+    var defaultStats = JSON.stringify({ coins: 100, streak: 1, essence: {light:0, rain:0, soil:0}, unlockedPlants: [] });
     statsSheet.appendRow([userId, defaultStats]);
-  }
 
-  return successResponse({ userId: userId, msg: "開通成功！歡迎加入植物園" });
+    // 發送成功的 Email
+    var subject = "✨ [語林之境] 恭喜！您的入園申請已核准";
+    var body = "親愛的 " + userId + "：\n\n您的入園申請已通過。請回到 App 進行激活。\n\n" +
+               "🔑 啟動金鑰：" + license + "\n\n" +
+               "步驟：\n1. 使用帳號密碼登入\n2. 系統將要求輸入啟動金鑰與您的 Gemini API Key\n3. 完成綁定後即可開始探索！";
+    try {
+      MailApp.sendEmail(email, subject, body);
+    } catch(err) {}
+  }
 }
 
 /**
@@ -149,39 +209,34 @@ function handleGetUserStats(payload) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var userId = payload.userId;
 
-  // 1. 取得遊戲數據 (從 UserStats)
   var stats = {};
   var statsSheet = ss.getSheetByName("UserStats");
   if (statsSheet) {
-    var statsData = statsSheet.getDataRange().getValues();
-    for (var i = 1; i < statsData.length; i++) {
-      if (statsData[i][0] == userId) {
-        stats = JSON.parse(statsData[i][1] || "{}");
-        break;
-      }
+    var finder = statsSheet.createTextFinder(userId).matchEntireCell(true).findNext();
+    if (finder) {
+      stats = JSON.parse(statsSheet.getRange(finder.getRow(), 2).getValue() || "{}");
     }
   }
 
-  // 2. 取得單字本 (從 WordBank)
+  // 2. 取得單字本 (從 WordBank) - 採搜尋器優化
   var savedWords = [];
   var wordSheet = ss.getSheetByName("WordBank");
   if (wordSheet) {
-    var wordData = wordSheet.getDataRange().getValues();
-    for (var i = 1; i < wordData.length; i++) {
-      if (wordData[i][0] == userId) {
-        var metadata = JSON.parse(wordData[i][8] || "{}");
-        savedWords.push({
-          word: wordData[i][1],
-          pronunciation: wordData[i][2],
-          meaning: wordData[i][3],
-          exampleSentence: wordData[i][4],
-          exampleTranslation: wordData[i][5],
-          addedAt: new Date(wordData[i][6]).getTime(),
-          id: wordData[i][7],
-          ...metadata // 包含 SRS 進度 (reviewCount, intervalDays, nextReview, langKey)
-        });
-      }
-    }
+    var ranges = wordSheet.createTextFinder(userId).matchEntireCell(true).findAll();
+    ranges.forEach(function(range) {
+      var row = wordSheet.getRange(range.getRow(), 1, 1, 9).getValues()[0];
+      var metadata = JSON.parse(row[8] || "{}");
+      savedWords.push({
+        word: row[1],
+        pronunciation: row[2],
+        meaning: row[3],
+        exampleSentence: row[4],
+        exampleTranslation: row[5],
+        addedAt: new Date(row[6]).getTime(),
+        id: row[7],
+        ...metadata
+      });
+    });
   }
 
   return successResponse({
@@ -205,16 +260,12 @@ function handleUpdateUserStats(payload) {
     var statsSheet = ss.getSheetByName("UserStats");
     if (!statsSheet) statsSheet = ss.insertSheet("UserStats");
     
-    var statsData = statsSheet.getDataRange().getValues();
-    var foundStats = false;
-    for (var i = 1; i < statsData.length; i++) {
-      if (statsData[i][0] == userId) {
-        statsSheet.getRange(i + 1, 2).setValue(JSON.stringify(payload.stats));
-        foundStats = true;
-        break;
-      }
+    var finder = statsSheet.createTextFinder(userId).matchEntireCell(true).findNext();
+    if (finder) {
+      statsSheet.getRange(finder.getRow(), 2).setValue(JSON.stringify(payload.stats));
+    } else {
+      statsSheet.appendRow([userId, JSON.stringify(payload.stats)]);
     }
-    if (!foundStats) statsSheet.appendRow([userId, JSON.stringify(payload.stats)]);
 
     // 同步更新排行榜
     try {
@@ -228,11 +279,13 @@ function handleUpdateUserStats(payload) {
     var wordSheet = ss.getSheetByName("WordBank");
     if (!wordSheet) wordSheet = ss.insertSheet("WordBank");
     
-    var existingWords = wordSheet.getDataRange().getValues();
+    var wordRanges = wordSheet.createTextFinder(userId).matchEntireCell(true).findAll();
     var existingIds = {};
-    for (var j = 1; j < existingWords.length; j++) {
-      if (existingWords[j][0] == userId) existingIds[existingWords[j][7]] = j + 1;
-    }
+    wordRanges.forEach(function(range) {
+      var r = range.getRow();
+      var id = wordSheet.getRange(r, 8).getValue();
+      existingIds[id] = r;
+    });
 
     payload.savedWords.forEach(function(w) {
       var wordId = w.id || (w.word + "_" + w.addedAt);
@@ -367,20 +420,19 @@ function handleGetSavedArticles(payload) {
   var sheet = ss.getSheetByName("ArticleBank");
   if (!sheet) return successResponse([]);
 
-  var data = sheet.getDataRange().getValues();
   var articles = [];
-  for (var i = 1; i < data.length; i++) {
-    if (data[i][0] == payload.userId) {
-      articles.push({
-        userId: data[i][0],
-        title: data[i][1],
-        content: data[i][2],
-        langKey: data[i][3],
-        date: data[i][4],
-        id: data[i][5]
-      });
-    }
-  }
+  var ranges = sheet.createTextFinder(payload.userId).matchEntireCell(true).findAll();
+  ranges.forEach(function(range) {
+    var row = sheet.getRange(range.getRow(), 1, 1, 6).getValues()[0];
+    articles.push({
+      userId: row[0],
+      title: row[1],
+      content: row[2],
+      langKey: row[3],
+      date: row[4],
+      id: row[5]
+    });
+  });
 
   return successResponse(articles);
 }
@@ -434,10 +486,12 @@ function verifyUserAndGetRow(userId, apiKey) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
   if (!sheet) return { error: "系統未設定 Users 表單" };
 
-  var data = sheet.getDataRange().getValues();
-  for (var i = 1; i < data.length; i++) {
-    if (data[i][0] == userId && data[i][2] == apiKey) {
-      return { rowIndex: i + 1, data: data[i] };
+  var finder = sheet.createTextFinder(userId).matchEntireCell(true).findNext();
+  if (finder) {
+    var row = finder.getRow();
+    var rowData = sheet.getRange(row, 1, 1, 3).getValues()[0];
+    if (rowData[2] == apiKey) {
+      return { rowIndex: row, data: rowData };
     }
   }
   return { error: "無效的令牌或帳號不存在" };

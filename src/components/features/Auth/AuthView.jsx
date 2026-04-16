@@ -5,30 +5,37 @@ import { toast } from '../../ui/Toast';
 import Fireflies from '../../ui/Fireflies';
 
 const AuthView = () => {
-  const { login, register } = useAuth();
-  const [tab, setTab] = useState('login'); // 'login' or 'register'
+  const { login, apply, activate } = useAuth();
+  const [tab, setTab] = useState('login'); // 'login', 'apply', 'activate'
   const [loading, setLoading] = useState(false);
 
   // Form states
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
-  const [apiKey, setApiKey] = useState('');
-  const [licenseKey, setLicenseKey] = useState('');
+  const [email, setEmail] = useState(''); // New for Application
+  const [apiKey, setApiKey] = useState(''); // Gemini API Key (Activation)
+  const [licenseKey, setLicenseKey] = useState(''); // Issued by admin (Activation)
 
   const handleLogin = async () => {
     if (!userId || !password) return toast("請輸入園丁帳號與密碼！", 3000);
     setLoading(true);
     try {
-      await login(userId, password);
-      toast(`🌿 歡迎回到植物園, ${userId}`);
+      const res = await login(userId, password);
+      // useAuthStore login returns an object now
+      if (res && res.needsActivation) {
+        setTab('activate');
+        toast("🛡️ 帳號核准通過！請輸入激活金鑰以開通溫室。");
+      } else {
+        toast(`🌿 歡迎回到植物園, ${userId}`);
+      }
     } catch (e) {
       toast("❌ " + e.message);
     }
     setLoading(false);
   };
 
-  const handleRegister = async () => {
-    if (!userId || !password || !apiKey || !licenseKey) return toast("請填寫所有欄位！", 3000);
+  const handleApply = async () => {
+    if (!userId || !password || !email) return toast("請填寫所有欄位！", 3000);
     
     const pwdRegex = /^(?=.*[a-zA-Z])(?=.*\d).{8,}$/;
     if (!pwdRegex.test(password)) {
@@ -37,10 +44,21 @@ const AuthView = () => {
 
     setLoading(true);
     try {
-      await register(userId, password, apiKey, licenseKey);
-      toast("✨ 園區開通成功！請直接登入。");
+      await apply(userId, password, email);
+      toast("✨ 申請已送出！管理員核准後將金鑰寄送至您的 Email。", 5000);
       setTab('login');
-      // Keep credentials populated for quick login
+    } catch (e) {
+      toast("❌ " + e.message);
+    }
+    setLoading(false);
+  };
+
+  const handleActivate = async () => {
+    if (!licenseKey || !apiKey) return toast("請填寫激活金鑰與 Gemini API Key！");
+    setLoading(true);
+    try {
+      await activate(userId, licenseKey, apiKey);
+      toast("🌟 帳號激活成功！歡迎進入語林之境。");
     } catch (e) {
       toast("❌ " + e.message);
     }
@@ -55,18 +73,26 @@ const AuthView = () => {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-emerald-500/10 rounded-full breathing-glow blur-[60px] pointer-events-none" />
       <GlassPanel className="p-6 sm:p-8 max-w-sm w-full">
         <div className="flex justify-center mb-6 border-b border-stone-200">
-          <button 
-            onClick={() => setTab('login')} 
-            className={`w-1/2 pb-2 font-bold transition ${tab === 'login' ? 'text-orange-600 border-b-2 border-orange-500' : 'text-stone-400 hover:text-orange-600 border-b-2 border-transparent'}`}
-          >
-            入園登入
-          </button>
-          <button 
-            onClick={() => setTab('register')} 
-            className={`w-1/2 pb-2 font-bold transition ${tab === 'register' ? 'text-orange-600 border-b-2 border-orange-500' : 'text-stone-400 hover:text-orange-600 border-b-2 border-transparent'}`}
-          >
-            領取溫室
-          </button>
+          {tab !== 'activate' ? (
+            <>
+              <button 
+                onClick={() => setTab('login')} 
+                className={`w-1/2 pb-2 font-bold transition ${tab === 'login' ? 'text-orange-600 border-b-2 border-orange-500' : 'text-stone-400 hover:text-orange-600 border-b-2 border-transparent'}`}
+              >
+                入園登入
+              </button>
+              <button 
+                onClick={() => setTab('apply')} 
+                className={`w-1/2 pb-2 font-bold transition ${tab === 'apply' ? 'text-orange-600 border-b-2 border-orange-500' : 'text-stone-400 hover:text-orange-600 border-b-2 border-transparent'}`}
+              >
+                申請入園
+              </button>
+            </>
+          ) : (
+            <div className="w-full pb-2 text-center text-orange-600 font-bold border-b-2 border-orange-500 animate-pulse">
+              🛡️ 帳號激活中
+            </div>
+          )}
         </div>
 
         {tab === 'login' && (
@@ -94,40 +120,59 @@ const AuthView = () => {
           </div>
         )}
 
-        {tab === 'register' && (
+        {tab === 'apply' && (
           <div className="text-center animate-fadeIn">
-            <h1 className="text-2xl font-bold text-stone-800 mb-2">✨ 開通專屬溫室</h1>
-            <p className="text-[11px] text-stone-500 mb-4 text-left leading-tight border-l-2 border-orange-400 pl-2">請輸入您的產品啟動金鑰，並綁定專屬的 AI 種子 (API Key)。</p>
-            <input 
-              type="text" 
-              value={licenseKey} onChange={e => setLicenseKey(e.target.value)}
-              className="w-full px-4 py-3 border-2 border-amber-300 bg-amber-50 rounded-xl mb-4 text-sm font-bold text-amber-800 focus:ring-2 focus:ring-amber-500 outline-none placeholder-amber-700/50" 
-              placeholder="🔑 貼上產品啟動金鑰 (License)" 
-            />
+            <h1 className="text-2xl font-bold text-stone-800 mb-2">✨ 提出入園申請</h1>
+            <p className="text-[11px] text-stone-500 mb-4 text-left leading-tight border-l-2 border-orange-400 pl-2">申請後請等待管理員核准，通過後啟動金鑰將寄送至您的信箱。</p>
             <input 
               type="text" 
               value={userId} onChange={e => setUserId(e.target.value)}
               className="w-full px-4 py-3 border border-stone-300 bg-white/90 rounded-xl mb-3 text-sm focus:ring-2 focus:ring-orange-400 outline-none text-stone-800" 
-              placeholder="自訂園丁名稱" 
+              placeholder="想使用的園丁名稱" 
             />
             <input 
               type="password" 
               value={password} onChange={e => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-stone-300 bg-white/90 rounded-xl mb-1 text-sm focus:ring-2 focus:ring-orange-400 outline-none text-stone-800" 
-              placeholder="設定密碼 (至少8碼英數混合)" 
+              className="w-full px-4 py-3 border border-stone-300 bg-white/90 rounded-xl mb-3 text-sm focus:ring-2 focus:ring-orange-400 outline-none text-stone-800" 
+              placeholder="設定登入密碼" 
+            />
+            <input 
+              type="email" 
+              value={email} onChange={e => setEmail(e.target.value)}
+              className="w-full px-4 py-3 border border-stone-300 bg-white/90 rounded-xl mb-6 text-sm focus:ring-2 focus:ring-orange-400 outline-none text-stone-800" 
+              placeholder="您的電子郵件 (接收金鑰用)" 
+            />
+            <button 
+              onClick={handleApply} disabled={loading}
+              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl shadow-md transition transform active:scale-95 border border-orange-600 disabled:opacity-75"
+            >
+              {loading ? '申請傳送中...' : '📝 送出入園申請'}
+            </button>
+          </div>
+        )}
+
+        {tab === 'activate' && (
+          <div className="text-center animate-fadeIn">
+            <h1 className="text-2xl font-bold text-stone-800 mb-2">🔐 帳號激活</h1>
+            <p className="text-[11px] text-stone-500 mb-4 text-left leading-tight border-l-2 border-orange-400 pl-2">請輸入 Email 中的啟動金鑰與您的 Gemini API Key 以完成客製化溫室綁定。</p>
+            <input 
+              type="text" 
+              value={licenseKey} onChange={e => setLicenseKey(e.target.value)}
+              className="w-full px-4 py-3 border-2 border-amber-300 bg-amber-50 rounded-xl mb-4 text-sm font-bold text-amber-800 outline-none" 
+              placeholder="🔑 輸入 Email 收到的啟動金鑰" 
             />
             <input 
               type="password" 
               value={apiKey} onChange={e => setApiKey(e.target.value)}
-              className="w-full px-4 py-3 border border-stone-300 bg-white/90 rounded-xl mt-3 mb-1 text-sm focus:ring-2 focus:ring-orange-400 outline-none text-stone-800" 
+              className="w-full px-4 py-3 border border-stone-300 bg-white/90 rounded-xl mb-1 text-sm focus:ring-2 focus:ring-orange-400 outline-none text-stone-800" 
               placeholder="貼上您的 Gemini API Key" 
             />
             <a href="https://aistudio.google.com/" target="_blank" rel="noreferrer" className="block text-[10px] text-orange-500 hover:text-orange-700 hover:underline mb-5 text-right font-bold transition">👉 免費申請 AI 金鑰</a>
             <button 
-              onClick={handleRegister} disabled={loading}
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl shadow-md transition transform active:scale-95 border border-orange-600 disabled:opacity-75 disabled:active:scale-100"
+              onClick={handleActivate} disabled={loading}
+              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl shadow-md transition transform active:scale-95 border border-orange-600 disabled:opacity-75"
             >
-              {loading ? '驗證開通中...' : '📝 註冊並領取溫室'}
+              {loading ? '正在激活溫室...' : '🌟 完成激活並進入'}
             </button>
           </div>
         )}

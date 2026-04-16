@@ -24,18 +24,33 @@ export const useAuthStore = create(
         const deviceId = get().getDeviceId();
         const res = await callApi('login', { userId, password, deviceId });
         if (res.status === 'success') {
+          if (res.data.needsActivation) {
+            return { success: true, needsActivation: true, userId: res.data.userId };
+          }
           set({ 
             currentUser: userId, 
             apiKey: res.data.apiKey 
           });
+          return { success: true };
+        }
+        throw new Error(res.message);
+      },
+
+      apply: async (userId, password, email) => {
+        const res = await callApi('register', { userId, password, email });
+        if (res.status === 'success') {
           return res;
         }
         throw new Error(res.message);
       },
 
-      register: async (userId, password, apiKey, licenseKey) => {
-        const res = await callApi('register', { userId, password, userApiKey: apiKey, licenseKey });
+      activate: async (userId, licenseKey, userApiKey) => {
+        const res = await callApi('activateAccount', { userId, licenseKey, userApiKey });
         if (res.status === 'success') {
+          set({ 
+            currentUser: userId, 
+            apiKey: res.data.apiKey 
+          });
           return res;
         }
         throw new Error(res.message);

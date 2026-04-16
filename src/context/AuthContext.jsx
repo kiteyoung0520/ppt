@@ -17,7 +17,8 @@ export const AuthProvider = ({ children }) => {
     apiKey: auth.apiKey,
     loading: auth.isVerifying || !auth._hasHydrated,
     login: auth.login,
-    register: auth.register,
+    apply: auth.apply,
+    activate: auth.activate,
     logout: auth.logout,
   };
 
