@@ -113,14 +113,20 @@ function handleActivateAccount(payload) {
   var userId = payload.userId;
   var licenseKey = payload.licenseKey;
   var userApiKey = payload.userApiKey;
-  var userSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
+
+  // 改為去 Licenses 分頁找金鑰
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var lSheet = ss.getSheetByName("Licenses");
+  var lFinder = lSheet.createTextFinder(licenseKey).matchEntireCell(true).findNext();
+  if (!lFinder || lSheet.getRange(lFinder.getRow(), 1).getValue() != userId) {
+    return errorResponse("啟動金鑰不正確或不屬於此帳號");
+  }
+  
+  var userSheet = ss.getSheetByName("Users");
   var finder = userSheet.createTextFinder(userId).matchEntireCell(true).findNext();
   if (!finder) return errorResponse("帳號異常");
   
   var row = finder.getRow();
-  var rowData = userSheet.getRange(row, 1, 1, 4).getValues()[0];
-  if (rowData[3] != licenseKey) return errorResponse("啟動金鑰不正確");
-
   userSheet.getRange(row, 3).setValue(userApiKey); 
   return successResponse({ apiKey: userApiKey, userId: userId });
 }
@@ -144,11 +150,22 @@ function onEdit(e) {
       sheet.getRange(row, 6).setValue(license);
 
       var ss = e.source;
-      var userSheet = ss.getSheetByName("Users");
-      if (userSheet) userSheet.appendRow([userId, password, "", license, "[]", ""]);
       
+      // 1. 寫入 Users (A:UserID, B:Pass, C:ApiKey, D:RegDate, E:Devices, F:Expiry)
+      var userSheet = ss.getSheetByName("Users");
+      if (userSheet) userSheet.appendRow([userId, password, "", new Date(), "", ""]);
+      
+      // 2. 寫入 Licenses (A:UserID, B:LicenseKey)
+      var lSheet = ss.getSheetByName("Licenses") || ss.insertSheet("Licenses");
+      lSheet.appendRow([userId, license]);
+      
+      // 3. 寫入 UserStats (配合多欄位結構)
+      // B:Coins, C:Plant, D:Stage, F:Unlocked, G:Exp, K:ExtraJson
       var statsSheet = ss.getSheetByName("UserStats");
-      if (statsSheet) statsSheet.appendRow([userId, JSON.stringify({ coins: 100, streak: 1, essence: {light:0, rain:0, soil:0}, unlockedPlants: [] })]);
+      if (statsSheet) {
+        var extraJson = JSON.stringify({ essence: {light:0, rain:0, soil:0}, streak: 1, lastStudyDate: new Date().toDateString() });
+        statsSheet.appendRow([userId, 100, "黃花風鈴木", 0, 0, '["黃花風鈴木"]', 0, "[]", "[]", "{}", extraJson]);
+      }
 
       try {
         var subject = "✨ [語林之境] 您的入園申請已核准";
@@ -166,21 +183,63 @@ function onEdit(e) {
 // 4. 其他功能 (排行榜、文章、小語、強制授權)
 // ─────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────
+// 4. 其他功能 (排行榜、文章、小語、強制授權)
+// ─────────────────────────────────────────────────────────────────
+
 function handleGetUserStats(payload) {
   var userRow = verifyUserAndGetRow(payload.userId, payload.apiKey);
   if (userRow.error) return errorResponse(userRow.error);
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var stats = {}, savedWords = [];
+  var stats = { coins: 0, currentPlant: '黃花風鈴木', plantStage: 0, unlockedPlants: [], exp: 0, essence: {light:0, rain:0, soil:0}, streak: 0 }, savedWords = [];
+  
   var sSheet = ss.getSheetByName("UserStats");
   if (sSheet) {
     var f = sSheet.createTextFinder(payload.userId).matchEntireCell(true).findNext();
-    if (f) stats = JSON.parse(sSheet.getRange(f.getRow(), 2).getValue() || "{}");
+    if (f) {
+      var r = f.getRow();
+      var vals = sSheet.getRange(r, 1, 1, 11).getValues()[0];
+      // 依照截圖映射欄位
+      stats.coins = Number(vals[1] || 0);
+      stats.currentPlant = vals[2] || '黃花風鈴木';
+      stats.plantStage = Number(vals[3] || 0);
+      try {
+        // F欄是 UnlockedPlants，可能是 ["A","B"] 格式或 A,B 格式
+        var rawUnlocked = vals[5];
+        if (rawUnlocked && rawUnlocked.startsWith('[')) {
+          stats.unlockedPlants = JSON.parse(rawUnlocked);
+        } else {
+          stats.unlockedPlants = rawUnlocked ? String(rawUnlocked).split(',') : [];
+        }
+      } catch(e) { stats.unlockedPlants = []; }
+      
+      stats.exp = Number(vals[6] || 0);
+      
+      // K 欄 (Index 10) 存放精華與連勝資料 (JSON)
+      try {
+        var extra = JSON.parse(vals[10] || "{}");
+        stats.essence = extra.essence || {light:0, rain:0, soil:0};
+        stats.streak = extra.streak || 0;
+        stats.lastStudyDate = extra.lastStudyDate || null;
+      } catch(e) {}
+    }
   }
+
   var wSheet = ss.getSheetByName("WordBank");
   if (wSheet) {
     wSheet.createTextFinder(payload.userId).matchEntireCell(true).findAll().forEach(function(r){
       var v = wSheet.getRange(r.getRow(), 1, 1, 9).getValues()[0];
-      savedWords.push({ word: v[1], pronunciation: v[2], meaning: v[3], exampleSentence: v[4], exampleTranslation: v[5], addedAt: new Date(v[6]).getTime(), id: v[7], ...JSON.parse(v[8]||"{}") });
+      // A:UserID, B:Word, C:IPA, D:Definition, E:Context, F:ContextChn, G:Date, H:ID, I:Metadata
+      savedWords.push({ 
+        word: v[1], 
+        pronunciation: v[2], 
+        meaning: v[3], 
+        exampleSentence: v[4], 
+        exampleTranslation: v[5], 
+        addedAt: new Date(v[6] || Date.now()).getTime(), 
+        id: v[7], 
+        ...JSON.parse(v[8]||"{}") 
+      });
     });
   }
   return successResponse({ stats: stats, savedWords: savedWords });
@@ -190,19 +249,47 @@ function handleUpdateUserStats(payload) {
   var userRow = verifyUserAndGetRow(payload.userId, payload.apiKey);
   if (userRow.error) return errorResponse(userRow.error);
   var ss = SpreadsheetApp.getActiveSpreadsheet();
+
   if (payload.stats) {
     var sSheet = ss.getSheetByName("UserStats") || ss.insertSheet("UserStats");
     var f = sSheet.createTextFinder(payload.userId).matchEntireCell(true).findNext();
-    if (f) sSheet.getRange(f.getRow(), 2).setValue(JSON.stringify(payload.stats)); else sSheet.appendRow([payload.userId, JSON.stringify(payload.stats)]);
+    var s = payload.stats;
+    // 組合成額外資料 (Essence, Streak) 存入 K 欄
+    var extraJson = JSON.stringify({ essence: s.essence, streak: s.streak, lastStudyDate: s.lastStudyDate });
+    var unlockedJson = JSON.stringify(s.unlockedPlants || []);
+    
+    // 準備寫入橫列 (A-K)
+    var rowData = [payload.userId, s.coins, s.currentPlant, s.plantStage, 0, unlockedJson, s.exp || 0, "[]", "[]", "{}", extraJson];
+    
+    if (f) {
+      // 只更新 B, C, D, F, G, K 欄以防覆蓋其他手動欄位
+      var r = f.getRow();
+      sSheet.getRange(r, 2).setValue(s.coins);
+      sSheet.getRange(r, 3).setValue(s.currentPlant);
+      sSheet.getRange(r, 4).setValue(s.plantStage);
+      sSheet.getRange(r, 6).setValue(unlockedJson);
+      sSheet.getRange(r, 7).setValue(s.exp || 0);
+      sSheet.getRange(r, 11).setValue(extraJson);
+    } else {
+      sSheet.appendRow(rowData);
+    }
   }
+
   if (payload.savedWords) {
     var wSheet = ss.getSheetByName("WordBank") || ss.insertSheet("WordBank");
     var existingIds = {};
     wSheet.createTextFinder(payload.userId).matchEntireCell(true).findAll().forEach(function(r){ existingIds[wSheet.getRange(r.getRow(), 8).getValue()] = r.getRow(); });
     payload.savedWords.forEach(function(w){
       var id = w.id || (w.word + "_" + w.addedAt);
-      var row = [payload.userId, w.word, w.pronunciation, w.meaning, w.exampleSentence, w.exampleTranslation, new Date(w.addedAt||Date.now()), id, JSON.stringify({reviewCount: w.reviewCount, intervalDays: w.intervalDays, nextReview: w.nextReview, langKey: w.langKey})];
-      if (existingIds[id]) wSheet.getRange(existingIds[id], 1, 1, 9).setValues([row]); else wSheet.appendRow(row);
+      // A:UserID, B:Word, C:IPA, D:Definition, E:Context, F:ContextChn, G:Date, H:ID, I:Metadata
+      var metaData = JSON.stringify({reviewCount: w.reviewCount, intervalDays: w.intervalDays, nextReview: w.nextReview, langKey: w.langKey});
+      var row = [payload.userId, w.word, w.pronunciation, w.meaning, w.exampleSentence, w.exampleTranslation, new Date(w.addedAt||Date.now()), id, metaData];
+      
+      if (existingIds[id]) {
+        wSheet.getRange(existingIds[id], 1, 1, 9).setValues([row]);
+      } else {
+        wSheet.appendRow(row);
+      }
     });
   }
   return successResponse({ updated: true });

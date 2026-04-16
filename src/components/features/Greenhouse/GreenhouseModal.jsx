@@ -13,26 +13,6 @@ const GreenhouseModal = ({ isOpen, onClose }) => {
   const [gachaResult, setGachaResult] = useState(null);
   const [isRolling, setIsRolling] = useState(false);
 
-  // Sync to Backend
-  const saveStatsToBackend = async (newCoins, newUnlocked, newExp) => {
-    try {
-      const updatedStatsObj = {
-        ...stats,
-        coins: newCoins,
-        exp: newExp,
-        unlockedPlants: Array.isArray(newUnlocked) ? newUnlocked.join(',') : newUnlocked
-      };
-
-      await callApi('updateUserStats', {
-        userId: currentUser,
-        stats: updatedStatsObj
-      }, apiKey);
-    } catch (e) {
-      console.error("Backend sync failed:", e);
-      toast("⚠️ 同步至伺服器失敗，請確認網路或 API 設定。");
-    }
-  };
-
   const handleGacha = async () => {
     if (stats.coins < 100) {
       return toast("🌞 陽光幣不足！去育苗室或世界樹學習賺取把！");
@@ -68,9 +48,8 @@ const GreenhouseModal = ({ isOpen, onClose }) => {
 
       const newCoins = stats.coins - 100;
 
-      // Update Local State
+      // 重要：只需更新本地 State，GameProvider 的守護程序會自動幫你備份到雲端對應欄位
       setStats({
-        ...stats,
         coins: newCoins,
         exp: newExp,
         unlockedPlants: newUnlocked
@@ -82,10 +61,6 @@ const GreenhouseModal = ({ isOpen, onClose }) => {
       });
 
       setIsRolling(false);
-      
-      // Save full results
-      await saveStatsToBackend(newCoins, newUnlocked, newExp);
-
     }, 1500);
   };
 
