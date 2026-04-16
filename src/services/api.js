@@ -55,25 +55,31 @@ export async function callApi(action, params, apiKey = null, targetLangKey = 'en
   }
 }
 
+let sessionWinner = null; // 動態記錄本次對話中反應最快且成功的模型
+
 const MODEL_PRIORITY = [
-  "gemini-1.5-flash-8b",            // 地表最快：8B 極速版
-  "gemini-3.1-flash-lite-preview", // 你指定的 3.1 輕量版
-  "gemini-2.0-flash-lite",          // 2.0 輕量備援
-  "gemini-2.5-flash",              // 2.5 快閃版
-  "gemini-2.5-pro",                // 2.5 專業版
-  "gemini-1.5-flash-latest",       // 穩定快閃版
-  "gemini-1.5-pro-latest"          // 穩定專業版 (最後備援)
+  "gemini-2.0-flash-exp",           // 最新：實驗/預覽版 (通常最強最新)
+  "gemini-1.5-flash-8b",            // 最快：8B 極致速度
+  "gemini-3.1-flash-lite-preview",  // 你指定的最新輕量版
+  "gemini-2.0-flash",               // 2.0 穩定快閃版
+  "gemini-1.5-flash-latest",        // 1.5 穩定最新版
+  "gemini-1.5-pro-latest"           // 備援：專業型
 ];
 
 export async function* streamGeminiChat(prompt, apiKey) {
   let lastError = null;
+  
+  // 動態排序：如果已經有 sessionWinner (上一次成功的模型)，排在最前面
+  const currentOrder = sessionWinner 
+    ? [sessionWinner, ...MODEL_PRIORITY.filter(m => m !== sessionWinner)]
+    : MODEL_PRIORITY;
 
-  for (const modelName of MODEL_PRIORITY) {
+  for (const modelName of currentOrder) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s safety timeout
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     try {
-      console.log(`[AI] 通訊中: ${modelName}...`);
+      console.log(`[智慧調度] 嘗試連接 ${modelName}...`);
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:streamGenerateContent?alt=sse&key=${apiKey}`;
       
       const response = await fetch(url, {
@@ -85,9 +91,11 @@ export async function* streamGeminiChat(prompt, apiKey) {
 
       clearTimeout(timeoutId);
 
-      // 如果模型繁忙 (429)、伺服器錯誤 (500+)、或權限不足 (401/403)，立即切換下一個模型
+      // 如果 429 或 500+，或是 401/403 權限問題，立即跳下一個模型
       if (response.status === 401 || response.status === 403 || response.status === 429 || response.status >= 500) {
-        console.warn(`[AI] ${modelName} 無權限、繁忙或錯誤 (${response.status})，秒切換至下一個模型...`);
+        console.warn(`[自動切換] ${modelName} 暫不可用 (${response.status})，改試下一個...`);
+        // 如果 sessionWinner 失敗了，清除它，重新尋找新的最快模型
+        if (modelName === sessionWinner) sessionWinner = null;
         continue;
       }
 
@@ -117,45 +125,43 @@ export async function* streamGeminiChat(prompt, apiKey) {
             
             try {
               const parsed = JSON.parse(dataStr);
-              // Handle safety filters or other non-content responses
               const chunk = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
               if (chunk) {
+                if (!hasYielded) {
+                  // 這是第一個 Byte，表示這個模型目前反應最快且可用
+                  if (sessionWinner !== modelName) {
+                    console.log(`[智慧動態優化] 已鎖定目前最快模型: ${modelName}`);
+                    sessionWinner = modelName;
+                  }
+                }
                 hasYielded = true;
                 yield chunk;
               }
               
-              // Handle blocked content
               if (parsed.candidates?.[0]?.finishReason === 'SAFETY') {
                 throw new Error("內容被安全過濾器攔截");
               }
             } catch (e) {
               if (e.message.includes("安全過濾")) throw e;
-              // Ignore parse errors on partial chunks
             }
           }
         }
       }
 
-      if (hasYielded) return; // 成功獲取內容，結束循環
+      if (hasYielded) return;
       else throw new Error("無內容輸出");
 
     } catch (err) {
       clearTimeout(timeoutId);
       lastError = err;
-      const isTimeout = err.name === 'AbortError';
-      
-      // 如果是內容過濾，就不切換了，直接報錯
-      if (err.message.includes("安全過濾")) {
-        throw err;
-      }
-
-      console.warn(`[AI] ${modelName} 失敗: ${err.message}${isTimeout ? ' (超時)' : ''}`);
-      // 繼續下一個模型
+      if (err.message.includes("安全過濾")) throw err;
+      if (modelName === sessionWinner) sessionWinner = null;
+      console.warn(`[AI 失敗] ${modelName}: ${err.message}`);
       continue; 
     }
   }
 
-  throw lastError || new Error("語林之靈目前繁忙，所有模型均未回應，請稍後再試。");
+  throw lastError || new Error("語林之靈目前繁忙，正努力恢復中，請稍候再試。");
 }
 
 /**
