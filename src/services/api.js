@@ -67,10 +67,10 @@ export async function* streamGeminiChat(prompt, apiKey) {
 
   for (const modelName of MODEL_PRIORITY) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s safety timeout
 
     try {
-      console.log(`[AI] Attempting ${modelName}...`);
+      console.log(`[AI] 通訊中: ${modelName}...`);
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:streamGenerateContent?alt=sse&key=${apiKey}`;
       
       const response = await fetch(url, {
@@ -82,8 +82,15 @@ export async function* streamGeminiChat(prompt, apiKey) {
 
       clearTimeout(timeoutId);
 
+      // 如果模型繁忙 (429) 或 伺服器錯誤 (500/503)，立即切換下一個模型
+      if (response.status === 429 || response.status >= 500) {
+        console.warn(`[AI] ${modelName} 繁忙或錯誤 (${response.status})，秒切換至下一個模型...`);
+        continue;
+      }
+
       if (!response.ok) {
-        throw new Error(`Model ${modelName} returned ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
       const reader = response.body.getReader();
@@ -92,7 +99,6 @@ export async function* streamGeminiChat(prompt, apiKey) {
       let hasYielded = false;
 
       while (true) {
-        // We could also put a timeout on reader.read() if we want to be super safe
         const { done, value } = await reader.read();
         if (done) break;
         
@@ -108,31 +114,45 @@ export async function* streamGeminiChat(prompt, apiKey) {
             
             try {
               const parsed = JSON.parse(dataStr);
+              // Handle safety filters or other non-content responses
               const chunk = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
               if (chunk) {
                 hasYielded = true;
                 yield chunk;
               }
+              
+              // Handle blocked content
+              if (parsed.candidates?.[0]?.finishReason === 'SAFETY') {
+                throw new Error("內容被安全過濾器攔截");
+              }
             } catch (e) {
-              console.warn("Parse error on SSE chunk:", dataStr);
+              if (e.message.includes("安全過濾")) throw e;
+              // Ignore parse errors on partial chunks
             }
           }
         }
       }
 
-      if (hasYielded) return;
-      else throw new Error("No content yielded");
+      if (hasYielded) return; // 成功獲取內容，結束循環
+      else throw new Error("無內容輸出");
 
     } catch (err) {
       clearTimeout(timeoutId);
-      const isTimeout = err.name === 'AbortError';
-      console.warn(`[AI] ${modelName} failed${isTimeout ? ' (Timeout)' : ''}: ${err.message}`);
       lastError = err;
+      const isTimeout = err.name === 'AbortError';
+      
+      // 如果是內容過濾，就不切換了，直接報錯
+      if (err.message.includes("安全過濾")) {
+        throw err;
+      }
+
+      console.warn(`[AI] ${modelName} 失敗: ${err.message}${isTimeout ? ' (超時)' : ''}`);
+      // 繼續下一個模型
       continue; 
     }
   }
 
-  throw lastError || new Error("All AI models failed to respond.");
+  throw lastError || new Error("語林之靈目前繁忙，所有模型均未回應，請稍後再試。");
 }
 
 /**
