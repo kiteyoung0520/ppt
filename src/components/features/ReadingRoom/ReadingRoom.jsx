@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { streamGeminiChat, safeParseJSON } from '../../../services/api';
 import { useAuth } from '../../../context/AuthContext';
 import { useGame } from '../../../context/GameContext';
+import { useSettings } from '../../../context/SettingsContext';
 import { toast } from '../../ui/Toast';
 
 // ── Clickable Text Engine ──────────────────────────────────────────
@@ -48,6 +49,7 @@ const ClickableText = ({ text, langCode, onWordClick }) => {
 // `word` can be a single word OR a selected sentence
 const WordCard = ({ word, langCode, speechCode, apiKey, articleContent, targetLangKey, onClose }) => {
   const isSentence = word.trim().split(/\s+/).length > 3;
+  const { speechRate } = useSettings();
   const { saveWord, addEssence } = useGame();
   const [info, setInfo] = useState(null);
   const [saved, setSaved] = useState(false);
@@ -61,7 +63,7 @@ const WordCard = ({ word, langCode, speechCode, apiKey, articleContent, targetLa
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
       u.lang = code || speechCode;
-      u.rate = 0.85;
+      u.rate = speechRate;
       window.speechSynthesis.speak(u);
     }
   };
@@ -331,7 +333,7 @@ ${content}`;
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(content);
     u.lang = speechCode;
-    u.rate = 0.9;
+    u.rate = speechRate;
     window.speechSynthesis.speak(u);
   };
 
