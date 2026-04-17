@@ -57,14 +57,23 @@ export async function callApi(action, params, apiKey = null, targetLangKey = 'en
 
 let sessionWinner = null; // 動態記錄本次對話中反應最快且成功的模型
 
+// 嚴格遵照使用者指定的模型優先順位
 const MODEL_PRIORITY = [
-  "gemini-3.1-flash-lite-preview",
-  "gemini-2.5-flash",
-  "gemini-2.5-pro",
-  "gemini-flash-latest"
+  "gemini-3.1-flash",    // 1. 首選
+  "gemini-3-flash",      // 2. 二順位
+  "gemini-2.5-flash",    // 3. 三順位
+  "gemini-2.5-pro",      // 4. 四順位
+  "gemini-2.0-flash",    // 5. 目前穩定主力
+  "gemini-1.5-flash",    // 6. 穩定備援
+  "gemini-1.5-pro"       // 7. 最後防線
 ];
 
 export async function* streamGeminiChat(prompt, apiKey) {
+  // 金鑰守衛：避免因未設定 Key 而產生無意義的串流錯誤
+  if (!apiKey || apiKey.length < 10) {
+    throw new Error("⚠️ 尚未設定 Gemini API Key，請聯絡管理員或重新登入。");
+  }
+
   let lastError = null;
   
   // 動態排序：如果已經有 sessionWinner (上一次成功的模型)，排在最前面
@@ -74,7 +83,9 @@ export async function* streamGeminiChat(prompt, apiKey) {
 
   for (const modelName of currentOrder) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    // 實驗型號 (3.x / 2.5) 給 6 秒快速逾時，穩定型號給 12 秒
+    const isExperimental = modelName.startsWith("gemini-3") || modelName.includes("2.5");
+    const timeoutId = setTimeout(() => controller.abort(), isExperimental ? 6000 : 12000);
 
     try {
       console.log(`[智慧調度] 嘗試連接 ${modelName}...`);

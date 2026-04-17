@@ -58,7 +58,7 @@ export const useAuthStore = create(
 
       silentVerify: async () => {
         const { currentUser, apiKey, logout } = get();
-        // No user — nothing to verify. Clear loading immediately.
+        // 沒有使用者資料，直接放行，不執行驗證
         if (!currentUser || !apiKey) {
           set({ isVerifying: false });
           return;
@@ -67,11 +67,18 @@ export const useAuthStore = create(
         set({ isVerifying: true });
         try {
           const res = await callApi('getUserStats', { userId: currentUser }, apiKey);
-          if (res.status !== 'success') {
-            logout();
+          // 只有在後端明確回報「金鑰無效」或「帳號不存在」時才登出
+          // 其他錯誤（伺服器異常、網路超時）一律保留登入狀態
+          if (res.status === 'error') {
+            const msg = res.message || '';
+            if (msg.includes('金鑰') || msg.includes('無效') || msg.includes('不存在')) {
+              console.warn('AuthStore: 憑證無效，執行安全登出');
+              logout();
+            }
           }
         } catch (e) {
-          console.error("AuthStore: Silent verification failed", e);
+          // 網路錯誤 → 保留登入，不踢人
+          console.warn('AuthStore: 驗證連線失敗，保留登入狀態', e.message);
         } finally {
           set({ isVerifying: false });
         }
