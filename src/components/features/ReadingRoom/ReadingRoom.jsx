@@ -239,6 +239,7 @@ ${articleContent.substring(0, 500)}`;
 // pastedContent: optional pre-filled text (bypasses Gemini streaming)
 const ReadingRoom = ({ taskTitle, prompt, pastedContent, targetLangKey, onClose }) => {
   const { userId, apiKey } = useAuth();
+  const { speechRate } = useSettings();
   const { recordActivity, addEssence, saveArticle } = useGame();
   const [content, setContent] = useState(pastedContent || '');
   const [isStreaming, setIsStreaming] = useState(!pastedContent);
