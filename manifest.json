@@ -1,29 +1,27 @@
 {
+  "short_name": "語林之境",
   "name": "語林之境 LinguaGarden",
-  "short_name": "LinguaGarden",
-  "description": "AI-Powered Language Learning & Ecosystem",
-  "start_url": "/ppt/",
-  "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#10b981",
   "icons": [
     {
-      "src": "app_icon.png",
+      "src": "./app_icon.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "app_icon.png",
+      "src": "./app_icon.png",
       "sizes": "512x512",
       "type": "image/png"
     }
   ],
+  "start_url": "./",
+  "display": "standalone",
+  "theme_color": "#10b981",
+  "background_color": "#0f172a",
   "shortcuts": [
     {
-      "name": "閃電翻譯 Flash Translate",
-      "short_name": "Translate",
-      "url": "/ppt/#/translate",
-      "icons": [{ "src": "app_icon.png", "sizes": "192x192" }]
+      "name": "閃電翻譯器",
+      "url": "./",
+      "icons": [{ "src": "./app_icon.png", "sizes": "192x192" }]
     }
   ]
 }
