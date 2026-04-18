@@ -20,6 +20,7 @@ export const AuthProvider = ({ children }) => {
     apply: auth.apply,
     activate: auth.activate,
     logout: auth.logout,
+    updateApiKey: auth.updateApiKey,
   };
 
   return (

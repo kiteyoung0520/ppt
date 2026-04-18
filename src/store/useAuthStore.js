@@ -86,6 +86,10 @@ export const useAuthStore = create(
 
       logout: () => {
         set({ currentUser: null, apiKey: null });
+      },
+
+      updateApiKey: (newKey) => {
+        set({ apiKey: newKey });
       }
     }),
     {

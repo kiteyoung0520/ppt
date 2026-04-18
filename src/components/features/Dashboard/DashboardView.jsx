@@ -16,6 +16,7 @@ import VocabBookView from '../VocabBook/VocabBookView';
 import ForestTrialView from '../ForestTrial/ForestTrialView';
 import LeaderboardView from '../Leaderboard/LeaderboardView';
 import LibraryView from '../Library/LibraryView';
+import ProfileSettingsView from '../ProfileSettings/ProfileSettingsView';
 
 // UI Overlays
 import OnboardingModal from '../../ui/OnboardingModal';
@@ -186,6 +187,7 @@ const FeatureHub = ({ onNavigate, onOpenGreenhouse, stats, streak, savedWords, l
           <GridCard emoji="⚔️" title="語林試鍊" subtitle="守護靈英文知識問答" accent="bg-red-900/60" onClick={() => onNavigate('trial')} />
           <GridCard emoji="🏆" title="語林英雄榜" subtitle="全服尋語者排行" accent="bg-amber-600/60" onClick={() => onNavigate('rank')} />
           <GridCard emoji="🔖" title="語林轉錄庫" subtitle="已收藏文章重溫" accent="bg-orange-800/60" onClick={() => onNavigate('archive')} />
+          <GridCard emoji="👤" title="守護者檔案" subtitle="學習成就與設定" accent="bg-teal-900/60" onClick={() => onNavigate('profile')} />
         </div>
       </div>
     </div>
@@ -214,7 +216,7 @@ const DashboardView = () => {
     topic: '🌱 育苗室', explore: '🌳 世界樹', speak: '🦜 迴音谷',
     vocab: '📚 單字本', paste: '🔬 標本室', translate: '🕊️ 隨身口譯',
     chronicles: '📜 長卷', trial: '⚔️ 語林試鍊', rank: '🏆 英雄榜',
-    archive: '🔖 轉錄庫'
+    archive: '🔖 轉錄庫', profile: '👤 守護者檔案'
   };
 
   const ss = streakStyle(streak);
@@ -359,6 +361,7 @@ const DashboardView = () => {
                 {activeView === 'trial'      && <ForestTrialView />}
                 {activeView === 'rank'       && <LeaderboardView />}
                 {activeView === 'archive'    && <LibraryView onOpenArticle={handleOpenSavedArticle} />}
+                {activeView === 'profile'    && <ProfileSettingsView />}
               </div>
             </div>
           )}
