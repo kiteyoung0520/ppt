@@ -59,11 +59,11 @@ let sessionWinner = null; // 動態記錄本次對話中反應最快且成功的
 
 // 模型接力清單：使用確認可在 v1beta API 呼叫的正確模型識別符
 const MODEL_PRIORITY = [
-  "gemini-2.5-flash-preview-04-17", // 1. 首選：2.5 Flash 最新預覽版
-  "gemini-2.5-pro-preview-03-25",   // 2. 二順位：2.5 Pro 預覽版
-  "gemini-2.0-flash",               // 3. 三順位：穩定高速版本
-  "gemini-1.5-flash",               // 4. 四順位：穩定備援
-  "gemini-1.5-flash-8b",            // 5. 最後防線：輕量高配額
+  "gemini-3.1-flash-lite-preview", // 1. 首選：最新 3.1 極速輕量版
+  "gemini-2.5-flash",              // 2. 二順位：2.5 Flash 穩定版
+  "gemini-flash-latest",           // 3. 三順位：最新穩定 Flash 別名
+  "gemini-2.0-flash",              // 4. 穩定備援
+  "gemini-1.5-flash",              // 5. 最後防線
 ];
 
 export async function* streamGeminiChat(prompt, apiKey) {
