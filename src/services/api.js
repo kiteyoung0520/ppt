@@ -57,15 +57,13 @@ export async function callApi(action, params, apiKey = null, targetLangKey = 'en
 
 let sessionWinner = null; // 動態記錄本次對話中反應最快且成功的模型
 
-// 嚴格遵照使用者指定的模型優先順位
+// 模型接力清單：使用確認可在 v1beta API 呼叫的正確模型識別符
 const MODEL_PRIORITY = [
-  "gemini-3.1-flash",    // 1. 首選
-  "gemini-3-flash",      // 2. 二順位
-  "gemini-2.5-flash",    // 3. 三順位
-  "gemini-2.5-pro",      // 4. 四順位
-  "gemini-2.0-flash",    // 5. 目前穩定主力
-  "gemini-1.5-flash",    // 6. 穩定備援
-  "gemini-1.5-pro"       // 7. 最後防線
+  "gemini-2.5-flash-preview-04-17", // 1. 首選：2.5 Flash 最新預覽版
+  "gemini-2.5-pro-preview-03-25",   // 2. 二順位：2.5 Pro 預覽版
+  "gemini-2.0-flash",               // 3. 三順位：穩定高速版本
+  "gemini-1.5-flash",               // 4. 四順位：穩定備援
+  "gemini-1.5-flash-8b",            // 5. 最後防線：輕量高配額
 ];
 
 export async function* streamGeminiChat(prompt, apiKey) {
