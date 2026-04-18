@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://kiteyoung0520.github.io/AIET",
+  "homepage": "https://kiteyoung0520.github.io/ppt",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { streamGeminiChat, safeParseJSON } from '../../../services/api';
 import { useAuth } from '../../../context/AuthContext';
 import { useGame } from '../../../context/GameContext';
-import { useSettings } from '../../../context/SettingsContext';
 import { toast } from '../../ui/Toast';
 
 // ── Clickable Text Engine ──────────────────────────────────────────
@@ -49,7 +48,6 @@ const ClickableText = ({ text, langCode, onWordClick }) => {
 // `word` can be a single word OR a selected sentence
 const WordCard = ({ word, langCode, speechCode, apiKey, articleContent, targetLangKey, onClose }) => {
   const isSentence = word.trim().split(/\s+/).length > 3;
-  const { speechRate } = useSettings();
   const { saveWord, addEssence } = useGame();
   const [info, setInfo] = useState(null);
   const [saved, setSaved] = useState(false);
@@ -63,7 +61,7 @@ const WordCard = ({ word, langCode, speechCode, apiKey, articleContent, targetLa
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
       u.lang = code || speechCode;
-      u.rate = speechRate;
+      u.rate = 0.85;
       window.speechSynthesis.speak(u);
     }
   };
@@ -239,7 +237,6 @@ ${articleContent.substring(0, 500)}`;
 // pastedContent: optional pre-filled text (bypasses Gemini streaming)
 const ReadingRoom = ({ taskTitle, prompt, pastedContent, targetLangKey, onClose }) => {
   const { userId, apiKey } = useAuth();
-  const { speechRate } = useSettings();
   const { recordActivity, addEssence, saveArticle } = useGame();
   const [content, setContent] = useState(pastedContent || '');
   const [isStreaming, setIsStreaming] = useState(!pastedContent);
@@ -334,7 +331,7 @@ ${content}`;
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(content);
     u.lang = speechCode;
-    u.rate = speechRate;
+    u.rate = 0.9;
     window.speechSynthesis.speak(u);
   };
 
@@ -382,7 +379,7 @@ ${content}`;
                 🔊 朗讀全文
               </button>
               <button onClick={stopSpeaking} className="px-3 py-1.5 bg-stone-200 hover:bg-stone-300 text-stone-600 font-bold text-sm rounded-full transition" title="停止朗讀">
-                ⏹
+                停止
               </button>
             </>
           )}

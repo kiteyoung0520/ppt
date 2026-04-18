@@ -12,7 +12,6 @@ import GreenhouseModal from '../Greenhouse/GreenhouseModal';
 import EchoValleyView from '../EchoValley/EchoValleyView';
 import TranslatorView from '../Translator/TranslatorView';
 import SpecimenRoomView from '../Specimen/SpecimenRoomView';
-import ProfileSettingsView from '../ProfileSettings/ProfileSettingsView';
 import VocabBookView from '../VocabBook/VocabBookView';
 import ForestTrialView from '../ForestTrial/ForestTrialView';
 import LeaderboardView from '../Leaderboard/LeaderboardView';
@@ -187,7 +186,6 @@ const FeatureHub = ({ onNavigate, onOpenGreenhouse, stats, streak, savedWords, l
           <GridCard emoji="⚔️" title="語林試鍊" subtitle="守護靈英文知識問答" accent="bg-red-900/60" onClick={() => onNavigate('trial')} />
           <GridCard emoji="🏆" title="語林英雄榜" subtitle="全服尋語者排行" accent="bg-amber-600/60" onClick={() => onNavigate('rank')} />
           <GridCard emoji="🔖" title="語林轉錄庫" subtitle="已收藏文章重溫" accent="bg-orange-800/60" onClick={() => onNavigate('archive')} />
-          <GridCard emoji="⚙️" title="林間設定" subtitle="個人資料與語速" accent="bg-stone-700/60" onClick={() => onNavigate('settings')} />
         </div>
       </div>
     </div>
@@ -361,7 +359,6 @@ const DashboardView = () => {
                 {activeView === 'trial'      && <ForestTrialView />}
                 {activeView === 'rank'       && <LeaderboardView />}
                 {activeView === 'archive'    && <LibraryView onOpenArticle={handleOpenSavedArticle} />}
-                {activeView === 'settings'   && <ProfileSettingsView />}
               </div>
             </div>
           )}

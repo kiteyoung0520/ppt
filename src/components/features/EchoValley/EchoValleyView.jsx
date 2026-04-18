@@ -239,6 +239,19 @@ const EchoValleyView = () => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, pronunciationResult]);
 
+  // 新增：麥克風自動斷電保護 (Cleanup on Unmount)
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        console.log("[保護機制] 離開迴音谷，自動切斷麥克風...");
+        recognitionRef.current.stop();
+      }
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel(); // 同時停止語音播放
+      }
+    };
+  }, []);
+
   const initRecognition = (langCode) => {
     if (!SpeechRecognition) {
       toast("❌ 您的瀏覽器不支援語音辨識！請使用 Chrome 或 Edge。");
@@ -442,6 +455,7 @@ Rules:
     const rec = initRecognition(currentLang.speechCode);
     if (!rec) return;
 
+    recognitionRef.current = rec; // 關鍵：記錄實例以供保護機制追蹤
     rec.onstart = () => setIsPronouncing(true);
     rec.onresult = async (e) => {
       const recognized = e.results[0][0].transcript;
