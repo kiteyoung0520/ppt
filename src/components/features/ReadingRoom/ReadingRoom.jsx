@@ -272,6 +272,16 @@ const ReadingRoom = ({ taskTitle, prompt, pastedContent, targetLangKey, onClose 
     return () => { active = false; };
   }, [prompt, pastedContent, apiKey]);
 
+  // 新增：離開閱讀室自動停止朗讀保護
+  useEffect(() => {
+    return () => {
+      if ('speechSynthesis' in window) {
+        console.log("[保護機制] 離開閱讀室，自動停止文章朗讀...");
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
   // Phase 2: Background metadata (translation + vocab)
   useEffect(() => {
     if (!isStreaming && content && !metaData && !metaLoading) {
