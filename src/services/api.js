@@ -59,7 +59,7 @@ let sessionWinner = null; // 動態記錄本次對話中反應最快且成功的
 
 // ⚡️ 全新官方指定模型接力清單 (保持繁忙自動切換補位)
 const MODEL_PRIORITY = [
-  "gemini-3.1-flash-live-preview", // 1. 首選：最新 3.1 Live 預覽版
+  "gemini-3.1-flash-lite-preview", // 1. 首選：最新 3.1 Flash Lite 預覽版
   "gemini-3-flash-preview",      // 2. 二順位：3 系列 Flash 預覽版
   "gemini-2.5-flash",             // 3. 三順位：2.5 Flash
   "gemini-flash-latest",          // 4. 最後防線：穩定版備援
