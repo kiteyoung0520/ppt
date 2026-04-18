@@ -26,7 +26,7 @@ const AuthView = () => {
       // useAuthStore login returns an object now
       if (res && res.needsActivation) {
         setTab('activate');
-        toast("🛡️ 帳號核准通過！請輸入激活金鑰以開通溫室。");
+        toast("🛡️ 帳號核准通過！請輸入啟動金鑰以開通溫室。");
       } else {
         // 同步登入時抓到的雲端資產
         if (res.stats) {
@@ -51,7 +51,7 @@ const AuthView = () => {
     setLoading(true);
     try {
       await apply(userId, password, email);
-      toast("✨ 申請成功！啟動金鑰已寄送至您的信箱，請查收並進行激活面板輸入。", 6000);
+      toast("✨ 申請成功！啟動金鑰已寄送至您的信箱，請查收並進行啟動面板輸入。", 6000);
       setTab('login');
     } catch (e) {
       toast("❌ " + e.message);
@@ -60,11 +60,11 @@ const AuthView = () => {
   };
 
   const handleActivate = async () => {
-    if (!userId || !licenseKey || !apiKey) return toast("請填寫帳號、激活金鑰與 Gemini API Key！");
+    if (!userId || !licenseKey || !apiKey) return toast("請填寫帳號、啟動金鑰與 Gemini API Key！");
     setLoading(true);
     try {
       await activate(userId, licenseKey, apiKey);
-      toast("🌟 帳號激活成功！歡迎進入語林之境。");
+      toast("🌟 帳號啟動成功！歡迎進入語林之境。");
     } catch (e) {
       toast("❌ " + e.message);
     }
@@ -96,7 +96,7 @@ const AuthView = () => {
             </>
           ) : (
             <div className="w-full pb-2 text-center text-orange-600 font-bold border-b-2 border-orange-500 animate-pulse">
-              🛡️ 帳號激活中
+              🛡️ 帳號啟動中
             </div>
           )}
         </div>
@@ -159,7 +159,7 @@ const AuthView = () => {
 
         {tab === 'activate' && (
           <div className="text-center animate-fadeIn">
-            <h1 className="text-2xl font-bold text-white mb-2">🔐 帳號激活</h1>
+            <h1 className="text-2xl font-bold text-white mb-2">🔐 帳號啟動</h1>
             <p className="text-[11px] text-stone-400 mb-4 text-left leading-tight border-l-2 border-emerald-400 pl-2">請輸入帳號、Email 中的啟動金鑰與您的 Gemini API Key 以完成客製化溫室綁定。</p>
             <input 
               type="text" 
@@ -184,7 +184,7 @@ const AuthView = () => {
               onClick={handleActivate} disabled={loading}
               className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl shadow-md transition transform active:scale-95 border border-orange-600 disabled:opacity-75"
             >
-              {loading ? '正在激活溫室...' : '🌟 完成激活並進入'}
+              {loading ? '正在啟動溫室...' : '🌟 完成啟動並進入'}
             </button>
           </div>
         )}
