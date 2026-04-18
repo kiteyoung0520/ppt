@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { streamGeminiChat, safeParseJSON } from '../../../services/api';
 import { useAuth } from '../../../context/AuthContext';
 import { useGame } from '../../../context/GameContext';
+import { useSettings } from '../../../context/SettingsContext';
 import { toast } from '../../ui/Toast';
 
 // ── Clickable Text Engine ──────────────────────────────────────────
@@ -46,7 +47,7 @@ const ClickableText = ({ text, langCode, onWordClick }) => {
 
 // ── Word / Sentence Analysis Card ─────────────────────────────────
 // `word` can be a single word OR a selected sentence
-const WordCard = ({ word, langCode, speechCode, apiKey, articleContent, targetLangKey, onClose }) => {
+const WordCard = ({ word, langCode, speechCode, apiKey, articleContent, targetLangKey, onClose, speechRate }) => {
   const isSentence = word.trim().split(/\s+/).length > 3;
   const { saveWord, addEssence } = useGame();
   const [info, setInfo] = useState(null);
@@ -61,7 +62,7 @@ const WordCard = ({ word, langCode, speechCode, apiKey, articleContent, targetLa
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
       u.lang = code || speechCode;
-      u.rate = 0.85;
+      u.rate = speechRate || 1.0;
       window.speechSynthesis.speak(u);
     }
   };
@@ -238,6 +239,7 @@ ${articleContent.substring(0, 500)}`;
 const ReadingRoom = ({ taskTitle, prompt, pastedContent, targetLangKey, onClose }) => {
   const { userId, apiKey } = useAuth();
   const { recordActivity, addEssence, saveArticle } = useGame();
+  const { speechRate } = useSettings();
   const [content, setContent] = useState(pastedContent || '');
   const [isStreaming, setIsStreaming] = useState(!pastedContent);
   const [metaData, setMetaData] = useState(null);
@@ -341,7 +343,7 @@ ${content}`;
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(content);
     u.lang = speechCode;
-    u.rate = 0.9;
+    u.rate = speechRate || 1.0;
     window.speechSynthesis.speak(u);
   };
 
@@ -368,6 +370,7 @@ ${content}`;
           speechCode={speechCode}
           apiKey={apiKey}
           articleContent={content}
+          speechRate={speechRate}
           onClose={() => setSelectedWord(null)}
         />
       )}
@@ -441,7 +444,7 @@ ${content}`;
                       window.speechSynthesis.cancel();
                       const u = new SpeechSynthesisUtterance(metaData.translation);
                       u.lang = 'zh-TW';
-                      u.rate = 1.0;
+                      u.rate = speechRate || 1.0;
                       window.speechSynthesis.speak(u);
                     }}
                     className="text-[10px] bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 px-2 py-0.5 rounded-full font-bold transition ml-2"
@@ -469,7 +472,7 @@ ${content}`;
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] text-stone-500 bg-black/20 px-2 py-0.5 rounded">{v.phonetic}</span>
                           <button
-                            onClick={e => { e.stopPropagation(); const u = new SpeechSynthesisUtterance(v.word); u.lang = speechCode; u.rate = 0.85; window.speechSynthesis.cancel(); window.speechSynthesis.speak(u); }}
+                            onClick={e => { e.stopPropagation(); const u = new SpeechSynthesisUtterance(v.word); u.lang = speechCode; u.rate = speechRate || 1.0; window.speechSynthesis.cancel(); window.speechSynthesis.speak(u); }}
                             className="text-emerald-400 hover:text-emerald-300 text-sm"
                             title="朗讀"
                           >🔊</button>

@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useGame, NATIVE_PLANT_DB } from '../../../context/GameContext';
+import { useSettings } from '../../../context/SettingsContext';
 import { toast } from '../../ui/Toast';
 
 const ProfileSettingsView = () => {
   const { currentUser, apiKey, updateApiKey } = useAuth();
   const { stats, streak, savedWords } = useGame();
+  const { speechRate, setSpeechRate } = useSettings();
 
   const [inputKey, setInputKey] = useState(apiKey || '');
   const [showKey, setShowKey] = useState(false);
@@ -143,10 +145,39 @@ const ProfileSettingsView = () => {
                     💾 儲存並套用
                   </button>
                 </div>
-                <p className="text-[11px] text-stone-400 font-chn mt-1">儲存後將自動將所有 AI 串流切換至新的金鑰。</p>
+                <p className="text-[11px] text-stone-400 font-chn mt-1">儲存後將自動套用新的金鑰至所有 AI 串流。</p>
               </div>
             )}
           </div>
+
+          <div className="flex flex-col gap-3 mt-6 pt-6 border-t border-stone-100">
+            <label className="text-xs font-black text-stone-500 uppercase tracking-widest ml-1">語音朗讀速度 (Speech Rate)</label>
+            <div className="flex flex-col gap-4 bg-stone-50 border border-stone-200 rounded-xl p-4">
+              <div className="flex items-center justify-between text-sm font-bold text-stone-600">
+                <span>極慢</span>
+                <span className="text-emerald-600 text-lg font-black">{speechRate.toFixed(1)}x</span>
+                <span>極快</span>
+              </div>
+              <input 
+                type="range" 
+                min="0.5" 
+                max="1.5" 
+                step="0.1" 
+                value={speechRate}
+                onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
+                className="w-full accent-emerald-500 h-2 bg-stone-200 rounded-lg appearance-none cursor-pointer"
+              />
+              <div className="flex gap-2 justify-center mt-2">
+                <button onClick={() => setSpeechRate(0.8)} className={`px-4 py-1.5 rounded-full text-xs font-bold transition flex-1 sm:flex-none ${speechRate === 0.8 ? 'bg-emerald-500 text-white shadow-md' : 'bg-white border border-stone-200 text-stone-500 hover:bg-stone-100'}`}>🐢 0.8x</button>
+                <button onClick={() => setSpeechRate(1.0)} className={`px-4 py-1.5 rounded-full text-xs font-bold transition flex-1 sm:flex-none ${speechRate === 1.0 ? 'bg-emerald-500 text-white shadow-md' : 'bg-white border border-stone-200 text-stone-500 hover:bg-stone-100'}`}>🚶 1.0x</button>
+                <button onClick={() => setSpeechRate(1.2)} className={`px-4 py-1.5 rounded-full text-xs font-bold transition flex-1 sm:flex-none ${speechRate === 1.2 ? 'bg-emerald-500 text-white shadow-md' : 'bg-white border border-stone-200 text-stone-500 hover:bg-stone-100'}`}>⚡ 1.2x</button>
+              </div>
+            </div>
+            <p className="text-[11px] text-stone-400 font-chn ml-1 mt-1 leading-relaxed">
+              此設定將全域套用於：隨身口譯、閱讀室朗讀、單字發音及迴音谷對話。
+            </p>
+          </div>
+
         </div>
 
       </div>

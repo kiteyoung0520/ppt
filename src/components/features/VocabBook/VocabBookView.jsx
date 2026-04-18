@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useGame } from '../../../context/GameContext';
+import { useSettings } from '../../../context/SettingsContext';
 import { toast } from '../../ui/Toast';
 
 // ── Progress Bar ──────────────────────────────────────────────────
@@ -13,7 +14,7 @@ const ProgressBar = ({ current, total }) => (
 );
 
 // ── Flashcard ─────────────────────────────────────────────────────
-const Flashcard = ({ word, onRemembered, onForgot, onSkip }) => {
+const Flashcard = ({ word, onRemembered, onForgot, onSkip, speechRate }) => {
   const [flipped, setFlipped] = useState(false);
 
   const speakWord = () => {
@@ -22,7 +23,7 @@ const Flashcard = ({ word, onRemembered, onForgot, onSkip }) => {
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(word.word);
       u.lang = langMap[word.langKey] || 'en-US';
-      u.rate = 0.85;
+      u.rate = speechRate || 1.0;
       window.speechSynthesis.speak(u);
     }
   };
@@ -153,6 +154,7 @@ const WordList = ({ words, onRemove }) => {
 // ── Main VocabBookView ────────────────────────────────────────────
 const VocabBookView = () => {
   const { savedWords, updateWordReview, removeWord } = useGame();
+  const { speechRate } = useSettings();
   const [view, setView] = useState('review'); // 'review' | 'list'
   const [reviewIdx, setReviewIdx] = useState(0);
   const [sessionDone, setSessionDone] = useState(false);
@@ -279,6 +281,7 @@ const VocabBookView = () => {
                   onRemembered={handleRemembered}
                   onForgot={handleForgot}
                   onSkip={handleSkip}
+                  speechRate={speechRate}
                 />
               </div>
             )}
