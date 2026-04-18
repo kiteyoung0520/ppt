@@ -367,7 +367,7 @@ The "answer" field is the 0-based index of the correct option. Mix up which inde
 
           <button
             onClick={() => setPhase('lobby')}
-            className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl transition-all active:scale-95 mb-3"
+            className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-black font-black rounded-2xl transition-all active:scale-95 mb-3"
           >
             返回語林試鍊大廳
           </button>

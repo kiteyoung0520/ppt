@@ -396,7 +396,7 @@ ${content}`;
               </button>
             </>
           )}
-          <button onClick={onClose} className="px-4 py-1.5 bg-stone-200 hover:bg-stone-300 rounded-full font-bold text-sm">
+          <button onClick={onClose} className="px-4 py-1.5 bg-stone-200 hover:bg-stone-300 text-black rounded-full font-bold text-sm">
             返回
           </button>
         </div>

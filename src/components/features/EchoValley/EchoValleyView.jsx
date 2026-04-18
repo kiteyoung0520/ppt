@@ -699,7 +699,7 @@ Respond ONLY in strict JSON (no markdown):
 
           <button
             onClick={() => { setActiveSituation(null); setSessionReport(null); }}
-            className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl transition active:scale-95 shadow-lg"
+            className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-black font-black rounded-2xl transition active:scale-95 shadow-lg"
           >
             🌱 返回任務選擇
           </button>
