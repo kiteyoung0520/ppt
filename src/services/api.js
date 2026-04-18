@@ -104,7 +104,24 @@ export async function* streamGeminiChat(prompt, apiKey) {
       if (!response.ok) {
         const errorText = await response.text();
         console.warn(`[自動切換] ${modelName} 回報錯誤 (${response.status})，即將嘗試下一個模型...`);
-        // 如果是內容安全攔截 (通常回報 400)，我們依然嘗試換個模型試試看
+        
+        // 解析錯誤訊息以判斷類型
+        let parsedErrMsg = errorText;
+        try {
+          parsedErrMsg = JSON.parse(errorText)?.error?.message || errorText;
+        } catch(e) {}
+        
+        lastError = new Error(`連線失敗 (${response.status}): ${parsedErrMsg}`);
+        
+        // 🚨 金鑰被停用 (Leaked)：不浪費時間，立刻告知使用者
+        if (response.status === 403 && parsedErrMsg.toLowerCase().includes("leaked")) {
+          throw new Error("🚨 您的 API Key 已被 Google 停用 (外洩)！請至「👤守護者檔案」更換新金鑰。");
+        }
+        // 🚨 金鑰無效：同上
+        if (response.status === 400 && (parsedErrMsg.toLowerCase().includes("api key") || parsedErrMsg.toLowerCase().includes("invalid"))) {
+          throw new Error("🚨 您設定的 API Key 無效！請至「👤守護者檔案」檢查並更新您的金鑰。");
+        }
+
         if (modelName === sessionWinner) sessionWinner = null;
         continue;
       }
