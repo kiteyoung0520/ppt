@@ -10,6 +10,9 @@ export const TARGET_LANGS = {
 const apiCache = new Map();
 const CACHE_TTL = 30000; // 30 seconds
 
+// 🔒 安全握手令牌 (需與 GAS 後端一致)
+const SECURITY_HANDSHAKE_TOKEN = "FLG_SECURE_2024_PRO_V1";
+
 export async function callApi(action, params, apiKey = null, targetLangKey = 'en') {
   const cacheKey = `${action}_${JSON.stringify(params)}_${targetLangKey}`;
   
@@ -24,6 +27,7 @@ export async function callApi(action, params, apiKey = null, targetLangKey = 'en
 
   try {
     const payload = { 
+        securityToken: SECURITY_HANDSHAKE_TOKEN, // 🛡️ 安全握手
         action, 
         targetLang: TARGET_LANGS[targetLangKey]?.promptName || 'English', 
         ...params 

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { callApi } from '../services/api';
+import { obfuscate, deobfuscate } from '../services/security';
 
 export const useAuthStore = create(
   persist(
@@ -102,6 +103,16 @@ export const useAuthStore = create(
         apiKey: state.apiKey,
         deviceId: state.deviceId,
       }),
+      storage: createJSONStorage(() => ({
+        getItem: (name) => {
+          const val = localStorage.getItem(name);
+          return val ? deobfuscate(val) : null;
+        },
+        setItem: (name, value) => {
+          localStorage.setItem(name, obfuscate(value));
+        },
+        removeItem: (name) => localStorage.removeItem(name),
+      })),
       onRehydrateStorage: () => (state) => {
         if (state) state._hasHydrated = true;
       }
