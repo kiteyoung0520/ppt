@@ -59,6 +59,15 @@ export const useAuthStore = create(
 
       silentVerify: async () => {
         const { currentUser, apiKey, logout } = get();
+        
+        // 🛡️ 啟動超時保護：如果 5 秒內沒回應，強制解鎖畫面
+        const failsafe = setTimeout(() => {
+          if (get().isVerifying) {
+            console.warn("AuthStore: 驗證超時，強制進入系統...");
+            set({ isVerifying: false });
+          }
+        }, 5000);
+
         // 沒有使用者資料，直接放行，不執行驗證
         if (!currentUser || !apiKey) {
           set({ isVerifying: false });
@@ -81,6 +90,7 @@ export const useAuthStore = create(
           // 網路錯誤 → 保留登入，不踢人
           console.warn('AuthStore: 驗證連線失敗，保留登入狀態', e.message);
         } finally {
+          clearTimeout(failsafe);
           set({ isVerifying: false });
         }
       },

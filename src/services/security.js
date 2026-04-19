@@ -35,13 +35,9 @@ export const deobfuscate = (str) => {
     for (let i = 0; i < decoded.length; i++) {
         result += String.fromCharCode(decoded.charCodeAt(i) ^ SECRET_SALT.charCodeAt(i % SECRET_SALT.length));
     }
-    // 3. Try parse as JSON if it looks like one
-    if (result.startsWith('{') || result.startsWith('[')) {
-        return JSON.parse(result);
-    }
     return result;
   } catch (e) {
-    // If it's not obfuscated (old data), return as is
+    // If it's not obfuscated (old data) or invalid Base64, return as is
     return str;
   }
 };
