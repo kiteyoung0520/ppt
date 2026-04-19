@@ -334,31 +334,41 @@ const EchoValleyView = () => {
 
     const prompt = `
 System Context: ${sysPrompt}
-You are conversing with the user in ${currentLang.promptName}. The user is a Chinese speaker and may use Traditional Chinese (中文) when they don't know how to express themselves in ${currentLang.promptName}.
+You are currently roleplaying as an NPC conversing with the "User" in ${currentLang.promptName}. The User is a Chinese speaker learning ${currentLang.promptName}.
 
-Conversation history:
+Conversation History:
 ${contextHistory}
-User just said: "${userText}"
+User's Latest Input: "${userText}"
 
-Reply in character. Respond ONLY in pure JSON (no markdown):
+YOUR TASK:
+1. Reply as the NPC in ${currentLang.promptName}.
+2. Act as a Grammar Coach: If the User made mistakes in their input ("${userText}"), provide correction and explanation in Traditional Chinese.
+3. PROVIDE SUGGESTIONS FOR THE USER: Generate 3 natural options for what the USER could say to reply to your latest NPC message. These suggestions MUST be from the User's perspective.
+
+Respond ONLY in pure JSON (no markdown):
 {
   "grammar_coach": {
     "has_error": true,
-    "correction": "The corrected or more natural version of what the user just said in ${currentLang.promptName}",
-    "explanation": "Brief explanation of the mistake or why your correction is more natural (in Traditional Chinese 繁體中文). If the user's sentence was perfect or it's just 'Hello', set has_error to false and leave this empty."
+    "correction": "Corrected ${currentLang.promptName} version of User's input",
+    "explanation": "Brief explanation in Traditional Chinese (繁體中文)"
   },
-  "npc_reply": "Your conversational reply in ${currentLang.promptName}",
-  "translation": "Traditional Chinese (繁體中文) translation of your reply",
+  "npc_reply": "Your next reply as NPC in ${currentLang.promptName}",
+  "translation": "Traditional Chinese translation of NPC's reply",
   "suggested_replies": [
-    { "reply": "Natural response option in ${currentLang.promptName}", "phonetic": "IPA for English, or pronunciation guide for others", "translation": "繁體中文意思" },
-    { "reply": "Another option", "phonetic": "...", "translation": "..." },
-    { "reply": "Third option", "phonetic": "...", "translation": "..." }
+    { 
+      "reply": "Natural response the USER can use to reply to you", 
+      "phonetic": "IPA or pronunciation guide", 
+      "translation": "繁體中文意思" 
+    },
+    { "reply": "Option 2 for USER", "phonetic": "...", "translation": "..." },
+    { "reply": "Option 3 for USER", "phonetic": "...", "translation": "..." }
   ]
 }
 
-Rules for English: Use valid IPA symbols in "phonetic" (e.g., /ˈæp.əl/).
-Language Rule: All Chinese text (in "translation", "explanation", etc.) MUST be Traditional Chinese (繁體中文).
-CRITICAL: The "npc_reply" and "reply" (in suggestions) MUST BE IN ${currentLang.promptName}. Do NOT use Chinese in these fields.`;
+CRITICAL RULES:
+- The "suggested_replies" MUST be things the USER would say to the NPC.
+- All Chinese text MUST be Traditional Chinese (繁體中文).
+- Do NOT use Chinese in "npc_reply" or "reply" fields.`;
 
     try {
       const stream = streamGeminiChat(prompt, apiKey);
