@@ -14,24 +14,24 @@ function doPost(e) {
     var action = payload.action;
 
     switch (action) {
-      case 'login' return handleLogin(payload);
-      case 'getUserStats' return handleGetUserStats(payload);
-      case 'updateUserStats' return handleUpdateUserStats(payload);
-      case 'getRandomQuote' return handleGetRandomQuote(payload);
-      case 'register' return handleApply(payload);
-      case 'getLeaderboard' return handleGetLeaderboard(payload);
-      case 'saveArticle' return handleSaveArticle(payload);
-      case 'getSavedArticles' return handleGetSavedArticles(payload);
-      case 'activateAccount' return handleActivateAccount(payload);
-      default return errorResponse(未知的 API Action  + action);
+      case 'login': return handleLogin(payload);
+      case 'getUserStats': return handleGetUserStats(payload);
+      case 'updateUserStats': return handleUpdateUserStats(payload);
+      case 'getRandomQuote': return handleGetRandomQuote(payload);
+      case 'register': return handleApply(payload);
+      case 'getLeaderboard': return handleGetLeaderboard(payload);
+      case 'saveArticle': return handleSaveArticle(payload);
+      case 'getSavedArticles': return handleGetSavedArticles(payload);
+      case 'activateAccount': return handleActivateAccount(payload);
+      default: return errorResponse("未知的 API Action: " + action);
     }
   } catch (err) {
-    return errorResponse(伺服器解析錯誤： + err.message);
+    return errorResponse("伺服器解析錯誤：" + err.message);
   }
 }
 
 function doGet(e) {
-  return HtmlService.createHtmlOutput(Formosa LinguaGarden API is running.);
+  return HtmlService.createHtmlOutput("Formosa LinguaGarden API is running.");
 }
 
  ─────────────────────────────────────────────────────────────────
