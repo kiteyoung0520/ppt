@@ -7,7 +7,7 @@ import { toast } from '../../ui/Toast';
 const ProfileSettingsView = () => {
   const { currentUser, apiKey, updateApiKey } = useAuth();
   const { stats, streak, savedWords } = useGame();
-  const { speechRate, setSpeechRate, useHighQualityAI, setUseHighQualityAI } = useSettings();
+  const { speechRate, setSpeechRate } = useSettings();
 
   const [inputKey, setInputKey] = useState(apiKey || '');
   const [showKey, setShowKey] = useState(false);
@@ -176,30 +176,6 @@ const ProfileSettingsView = () => {
             <p className="text-[11px] text-stone-400 font-chn ml-1 mt-1 leading-relaxed">
               此設定將全域套用於：隨身口譯、閱讀室朗讀、單字發音及迴音谷對話。
             </p>
-          </div>
-
-          <div className="flex flex-col gap-3 mt-6 pt-6 border-t border-stone-100">
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col">
-                <span className="text-xs font-black text-stone-500 uppercase tracking-widest ml-1">✨ 高品質 AI 語音 (TTS)</span>
-                <span className="text-[10px] text-emerald-600 font-bold ml-1 uppercase tracking-tighter">Experimental Preview</span>
-              </div>
-              <button 
-                onClick={() => setUseHighQualityAI(!useHighQualityAI)}
-                className={`w-12 h-6 rounded-full transition-all relative ${useHighQualityAI ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-stone-200'}`}
-              >
-                <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-300 ${useHighQualityAI ? 'translate-x-6' : ''}`} />
-              </button>
-            </div>
-            
-            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100 rounded-2xl p-4">
-              <p className="text-xs text-emerald-800 font-bold mb-1 font-chn">
-                使用 Gemini 3.1 TTS 輸出更自然的擬人語氣。
-              </p>
-              <p className="text-[10px] text-emerald-600/70 font-chn leading-relaxed">
-                支援更豐富的情感起伏與正確重音，目前僅適用於「迴音谷」。開啟後請求速度可能稍慢。
-              </p>
-            </div>
           </div>
 
         </div>

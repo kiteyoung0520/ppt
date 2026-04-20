@@ -13,22 +13,9 @@ export const SettingsProvider = ({ children }) => {
     return saved ? parseFloat(saved) : 1.0;
   });
 
-  const [useHighQualityAI, setUseHighQualityAI] = useState(() => {
-    return localStorage.getItem('flg-highQualityAI') === 'true';
-  });
-
-  // Save changes to localStorage automatically
-  useEffect(() => {
-    localStorage.setItem('flg-targetLang', targetLangKey);
-  }, [targetLangKey]);
-
   useEffect(() => {
     localStorage.setItem('flg-speechRate', speechRate.toString());
   }, [speechRate]);
-
-  useEffect(() => {
-    localStorage.setItem('flg-highQualityAI', useHighQualityAI.toString());
-  }, [useHighQualityAI]);
 
   const currentLang = TARGET_LANGS[targetLangKey];
 
@@ -38,8 +25,6 @@ export const SettingsProvider = ({ children }) => {
       setTargetLangKey,
       speechRate,
       setSpeechRate,
-      useHighQualityAI,
-      setUseHighQualityAI,
       currentLang
     }}>
       {children}
