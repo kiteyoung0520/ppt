@@ -243,23 +243,25 @@ export async function callGeminiTTS(prompt, apiKey) {
 export function safeParseJSON(rawStr) {
   if (!rawStr) return null;
   
-  // Try direct parse first
+  const trimmed = rawStr.trim();
   try {
-    return JSON.parse(rawStr.trim());
+    return JSON.parse(trimmed);
   } catch (e) {
-    // If it fails, try to find the content between the first { and the last }
     try {
-      const match = rawStr.match(/\{[\s\S]*\}/);
-      if (match) {
-        // Clean up markdown markers if present
-        let cleaned = match[0].replace(/```json/gi, '').replace(/```/g, '').trim();
-        return JSON.parse(cleaned);
+      // 🕵️ 更強大的正則：嘗試抓取最外層的 { ... }
+      const firstBrace = trimmed.indexOf('{');
+      const lastBrace = trimmed.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace !== -1) {
+        let jsonStr = trimmed.substring(firstBrace, lastBrace + 1);
+        // 清理常見的 Markdown 標記
+        jsonStr = jsonStr.replace(/```json/gi, '').replace(/```/g, '').trim();
+        return JSON.parse(jsonStr);
       }
     } catch (innerError) {
-      console.error("Robust parse failed:", innerError);
-      throw new Error("無法解析 AI 產生的 JSON 格式");
+      console.error("Critical Parse Error! Raw output from AI:", rawStr);
+      throw new Error("AI 回傳格式異常，無法解析。");
     }
   }
-  throw new Error("無法解析 AI 產生的 JSON 格式（未找到有效的 JSON 物件）");
+  throw new Error("未偵測到有效的 JSON 數據");
 }
 
