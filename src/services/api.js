@@ -63,11 +63,13 @@ let sessionWinner = null; // 動態記錄本次對話中反應最快且成功的
 
 // ⚡️ 全新官方指定模型接力清單 (保持繁忙自動切換補位)
 const MODEL_PRIORITY = [
-  "gemini-3.1-flash-lite-preview", // 1. 首選：最新 3.1 Flash Lite 預覽版
-  "gemini-3-flash-preview",      // 2. 二順位：3 系列 Flash 預覽版
-  "gemini-2.5-flash",             // 3. 三順位：2.5 Flash
-  "gemini-flash-latest",          // 4. 最後防線：穩定版備援
+  "gemini-3.1-flash-lite-preview", 
+  "gemini-3-flash-preview",      
+  "gemini-2.5-flash",             
+  "gemini-flash-latest",          
 ];
+
+const MODEL_TTS = "gemini-3.1-flash-tts-preview";
 
 export async function* streamGeminiChat(prompt, apiKey) {
   // 金鑰守衛：避免因未設定 Key 而產生無意義的串流錯誤
@@ -185,6 +187,53 @@ export async function* streamGeminiChat(prompt, apiKey) {
   }
 
   throw lastError || new Error("語林之靈目前繁忙，正努力恢復中，請稍候再試。");
+}
+
+/**
+ * 🎙️ Gemini 3.1 Flash TTS 專用呼叫
+ * 同時獲取 JSON 內容與 高品質語音音訊
+ */
+export async function callGeminiTTS(prompt, apiKey) {
+  if (!apiKey || apiKey.length < 10) throw new Error("⚠️ 尚未設定 API Key");
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_TTS}:generateContent?key=${apiKey}`;
+  
+  const payload = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: {
+      response_modalities: ["text", "audio"],
+      speech_config: {
+        voice_config: {
+          prebuilt_voice_config: {
+            voice_name: "Puck" // 可選: Puck, Charon, Kore, Fenrir, Aoede
+          }
+        }
+      }
+    }
+  };
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`TTS 連線失敗 (${response.status}): ${errText}`);
+  }
+
+  const result = await response.json();
+  
+  // 提取文字與音訊數據
+  const parts = result.candidates?.[0]?.content?.parts || [];
+  const textPart = parts.find(p => p.text);
+  const audioPart = parts.find(p => p.inline_data && p.inline_data.mime_type.includes('audio'));
+
+  return {
+    text: textPart ? textPart.text : "",
+    audioBase64: audioPart ? audioPart.inline_data.data : null
+  };
 }
 
 /**

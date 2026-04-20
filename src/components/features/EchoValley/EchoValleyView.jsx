@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSettings } from '../../../context/SettingsContext';
 import { useAuth } from '../../../context/AuthContext';
 import { useGame } from '../../../context/GameContext';
-import { streamGeminiChat, safeParseJSON } from '../../../services/api';
+import { streamGeminiChat, callGeminiTTS, safeParseJSON } from '../../../services/api';
 import { toast } from '../../ui/Toast';
 
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -190,7 +190,7 @@ const PronunciationPanel = ({ result, targetPhrase, onResend, onRetry, onDismiss
 
 // ── Main Echo Valley View ───────────────────────────────────────────
 const EchoValleyView = () => {
-  const { currentLang, speechRate } = useSettings();
+  const { currentLang, speechRate, useHighQualityAI } = useSettings();
   const { apiKey } = useAuth();
   const { recordActivity, addEssence } = useGame();
 
@@ -269,6 +269,9 @@ const EchoValleyView = () => {
   };
 
   const speakText = (text) => {
+    // 🛡️ 如果開啟高品質 AI 語音，則不再使用瀏覽器合成音 (除非 TTS 失敗)
+    if (useHighQualityAI) return;
+
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
@@ -276,6 +279,32 @@ const EchoValleyView = () => {
       u.rate = speechRate || 1.0;
       window.speechSynthesis.speak(u);
     }
+  };
+
+  // 🎙️ 高品質音訊播放器
+  const playBase64Audio = (base64) => {
+    if (!base64) return;
+    try {
+      const audioBlob = b64toBlob(base64, 'audio/mp3');
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      audio.play();
+    } catch (e) {
+      console.error("Audio playback failed:", e);
+    }
+  };
+
+  const b64toBlob = (b64Data, contentType='', sliceSize=512) => {
+    const byteCharacters = atob(b64Data);
+    const byteArrays = [];
+    for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+      const slice = byteCharacters.slice(offset, offset + sliceSize);
+      const byteNumbers = new Array(slice.length);
+      for (let i = 0; i < slice.length; i++) byteNumbers[i] = slice.charCodeAt(i);
+      const byteArray = new Uint8Array(byteNumbers);
+      byteArrays.push(byteArray);
+    }
+    return new Blob(byteArrays, {type: contentType});
   };
 
   const handleStartSituation = (sit) => {
@@ -371,9 +400,18 @@ CRITICAL RULES:
 - Do NOT use Chinese in "npc_reply" or "reply" fields.`;
 
     try {
-      const stream = streamGeminiChat(prompt, apiKey);
       let rawText = '';
-      for await (const chunk of stream) rawText += chunk;
+      
+      if (useHighQualityAI) {
+        // ✨ 高品質 TTS 路徑：非串流，獲取音訊
+        const result = await callGeminiTTS(prompt, apiKey);
+        rawText = result.text;
+        if (result.audioBase64) playBase64Audio(result.audioBase64);
+      } else {
+        // ⚡ 標準路徑：文字串流
+        const stream = streamGeminiChat(prompt, apiKey);
+        for await (const chunk of stream) rawText += chunk;
+      }
       
       const parsed = safeParseJSON(rawText);
 
@@ -397,7 +435,10 @@ CRITICAL RULES:
         translation: parsed.translation,
         suggested: parsed.suggested_replies || []
       }]);
-      speakText(parsed.npc_reply);
+      
+      // 如果不是高品質語音模式，則使用內建 synthèse
+      if (!useHighQualityAI) speakText(parsed.npc_reply);
+      
     } catch (e) {
       toast("AI 解析錯誤：" + e.message);
     } finally {
