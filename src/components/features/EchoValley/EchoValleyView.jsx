@@ -401,12 +401,21 @@ CRITICAL RULES:
 
     try {
       let rawText = '';
+      let isFallback = false;
       
       if (useHighQualityAI) {
-        // ✨ 高品質 TTS 路徑：非串流，獲取音訊
-        const result = await callGeminiTTS(prompt, apiKey);
-        rawText = result.text;
-        if (result.audioBase64) playBase64Audio(result.audioBase64);
+        try {
+          // ✨ 嘗試高品質 TTS
+          const result = await callGeminiTTS(prompt, apiKey);
+          rawText = result.text;
+          if (result.audioBase64) playBase64Audio(result.audioBase64);
+        } catch (ttsErr) {
+          console.warn("TTS Failed, falling back to standard stream:", ttsErr);
+          isFallback = true;
+          // 🚀 自動降級：使用標準串流
+          const stream = streamGeminiChat(prompt, apiKey);
+          for await (const chunk of stream) rawText += chunk;
+        }
       } else {
         // ⚡ 標準路徑：文字串流
         const stream = streamGeminiChat(prompt, apiKey);
@@ -415,7 +424,7 @@ CRITICAL RULES:
       
       const parsed = safeParseJSON(rawText);
 
-      // Attach grammar coach feedback to the last user message
+      // ... (後續處理邏輯保持不變)
       if (parsed.grammar_coach && parsed.grammar_coach.has_error) {
         setMessages(prev => {
           const newArr = [...prev];
@@ -436,8 +445,8 @@ CRITICAL RULES:
         suggested: parsed.suggested_replies || []
       }]);
       
-      // 如果不是高品質語音模式，則使用內建 synthèse
-      if (!useHighQualityAI) speakText(parsed.npc_reply);
+      // 如果不是高品質語音模式，或是降級模式，則使用內建 synthèse
+      if (!useHighQualityAI || isFallback) speakText(parsed.npc_reply);
       
     } catch (e) {
       toast("AI 解析錯誤：" + e.message);
