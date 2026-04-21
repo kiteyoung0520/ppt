@@ -633,8 +633,8 @@ Respond ONLY in strict JSON (no markdown):
   // ── Session Report Screen (Proposal 3) ───────────────────────────
   if (sessionReport) {
     return (
-      <div className="flex flex-col h-full bg-stone-50 rounded-2xl overflow-hidden shadow-inner border border-stone-200 items-center justify-center p-6 animate-fadeIn">
-        <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-stone-200 p-8 text-center">
+      <div className="flex flex-col h-full bg-stone-50 rounded-2xl overflow-y-auto custom-scroll shadow-inner border border-stone-200 items-center p-4 sm:p-10 animate-fadeIn">
+        <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-stone-200 p-6 sm:p-8 text-center my-auto">
           <div className="text-6xl mb-4">📊</div>
           <div className="text-[10px] font-black text-emerald-600 tracking-widest uppercase mb-1">Post-Session Report</div>
           <h2 className="text-xl font-black text-stone-800 mb-6 font-chn">{sessionReport.situationLabel} · 課後報告</h2>
