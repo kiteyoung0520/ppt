@@ -114,11 +114,9 @@ export async function* streamGeminiChat(prompt, apiKey) {
         
         lastError = new Error(`連線失敗 (${response.status}): ${parsedErrMsg}`);
         
-        // 🚨 金鑰被停用 (Leaked)：不浪費時間，立刻告知使用者
         if (response.status === 403 && parsedErrMsg.toLowerCase().includes("leaked")) {
           throw new Error("🚨 您的 API Key 已被 Google 停用 (外洩)！請至「👤守護者檔案」更換新金鑰。");
         }
-        // 🚨 金鑰無效：同上
         if (response.status === 400 && (parsedErrMsg.toLowerCase().includes("api key") || parsedErrMsg.toLowerCase().includes("invalid"))) {
           throw new Error("🚨 您設定的 API Key 無效！請至「👤守護者檔案」檢查並更新您的金鑰。");
         }
@@ -151,7 +149,6 @@ export async function* streamGeminiChat(prompt, apiKey) {
               const chunk = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
               if (chunk) {
                 if (!hasYielded) {
-                  // 這是第一個 Byte，表示這個模型目前反應最快且可用
                   if (sessionWinner !== modelName) {
                     console.log(`[智慧動態優化] 已鎖定目前最快模型: ${modelName}`);
                     sessionWinner = modelName;

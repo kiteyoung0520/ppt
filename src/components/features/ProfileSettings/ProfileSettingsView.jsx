@@ -98,18 +98,18 @@ const ProfileSettingsView = () => {
             <h3 className="font-black text-stone-800 text-lg uppercase tracking-wider">系統核心設定</h3>
           </div>
 
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-4">
             <label className="text-xs font-black text-stone-500 uppercase tracking-widest ml-1">Gemini API Key</label>
             
             {!isEditingKey ? (
-              <div className="flex items-center gap-2">
-                <div className="flex-1 bg-stone-50 border border-stone-200 rounded-xl p-3 flex items-center justify-between">
-                  <span className="font-mono text-stone-600 truncate">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <div className="flex-1 bg-stone-50 border border-stone-200 rounded-2xl p-4 flex items-center justify-between shadow-sm">
+                  <span className="font-mono text-stone-600 text-sm truncate">
                     {showKey ? apiKey : '••••••••••••••••••••••••••••••••••••'}
                   </span>
                   <button 
                     onClick={() => setShowKey(!showKey)}
-                    className="text-stone-400 hover:text-emerald-500 transition px-2"
+                    className="text-stone-400 hover:text-emerald-500 transition px-2 text-xl"
                     title={showKey ? "隱藏" : "顯示"}
                   >
                     {showKey ? '🙈' : '👁️'}
@@ -117,35 +117,34 @@ const ProfileSettingsView = () => {
                 </div>
                 <button 
                   onClick={() => setIsEditingKey(true)}
-                  className="shrink-0 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 px-4 py-3 rounded-xl font-bold text-sm transition active:scale-95"
+                  className="shrink-0 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 px-6 py-4 sm:py-3 rounded-2xl font-black text-sm transition active:scale-95 shadow-sm border border-emerald-200"
                 >
-                  ✏️ 修改
+                  ✏️ 修改設定
                 </button>
               </div>
             ) : (
-              <div className="flex flex-col gap-3 animate-slideUp">
+              <div className="flex flex-col gap-4 animate-slideUp">
                 <input
                   type="text"
                   value={inputKey}
                   onChange={(e) => setInputKey(e.target.value)}
                   placeholder="請輸入新的 Gemini API Key..."
-                  className="w-full bg-white border-2 border-emerald-400 rounded-xl p-3 text-stone-700 font-mono focus:outline-none focus:ring-4 focus:ring-emerald-400/20 shadow-sm"
+                  className="w-full bg-white border-2 border-emerald-400 rounded-2xl p-4 text-stone-700 font-mono focus:outline-none focus:ring-8 focus:ring-emerald-400/10 shadow-lg text-sm sm:text-base"
                 />
-                <div className="flex gap-2">
+                <div className="flex gap-3">
                   <button 
                     onClick={() => { setIsEditingKey(false); setInputKey(apiKey); setShowKey(false); }}
-                    className="flex-1 py-3 bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold rounded-xl transition"
+                    className="flex-1 py-4 bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold rounded-2xl transition active:scale-95 text-sm"
                   >
                     取消
                   </button>
                   <button 
                     onClick={handleSaveKey}
-                    className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-[0_4px_15px_-3px_rgba(5,150,105,0.4)] transition active:scale-95 border-b-4 border-emerald-800 active:border-b-0 active:translate-y-1"
+                    className="flex-1 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl shadow-xl transition active:scale-95 border-b-4 border-emerald-800 active:border-b-0 active:translate-y-1 text-sm"
                   >
                     💾 儲存並套用
                   </button>
                 </div>
-                <p className="text-[11px] text-stone-400 font-chn mt-1">儲存後將自動套用新的金鑰至所有 AI 串流。</p>
               </div>
             )}
           </div>

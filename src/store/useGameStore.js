@@ -218,8 +218,8 @@ export const useGameStore = create(
             
             set((state) => ({ 
               stats: { ...state.stats, ...cloudStats },
-              streak: cloudStats.streak || 0,
-              lastStudyDate: cloudStats.lastStudyDate || null,
+              streak: cloudStats.streak ?? state.streak,
+              lastStudyDate: cloudStats.lastStudyDate ?? state.lastStudyDate,
               savedWords: cloudWords.length > 0 ? cloudWords : state.savedWords
             }));
             

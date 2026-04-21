@@ -167,9 +167,9 @@ function fetchUserStatsInternal(userId) {
           currentPlant: vals[2] || "黃花風鈴木",
           plantStage: Number(vals[3] || 0),
           unlockedPlants: String(vals[5]).split(","),
-          exp: Number(vals[6] || 0),
           essence: extra.essence || {light:0, rain:0, soil:0},
-          streak: extra.streak || 0
+          streak: extra.streak || 0,
+          lastStudyDate: extra.lastStudyDate || null
         };
       } catch(e) {}
     }
@@ -206,7 +206,11 @@ function updateUserStatsInternal(uid, stats, words) {
   var sSheet = ss.getSheetByName("UserStats") || ss.insertSheet("UserStats");
   var f = sSheet.createTextFinder(uid).matchEntireCell(true).findNext();
   if (stats) {
-    var extra = JSON.stringify({ essence: stats.essence, streak: stats.streak });
+    var extra = JSON.stringify({ 
+      essence: stats.essence, 
+      streak: stats.streak,
+      lastStudyDate: stats.lastStudyDate 
+    });
     var row = [uid, stats.coins, stats.currentPlant, stats.plantStage, 0, stats.unlockedPlants.join(","), stats.exp, "", "", "", extra];
     if (f) sSheet.getRange(f.getRow(), 1, 1, 11).setValues([row]);
     else sSheet.appendRow(row);
@@ -239,10 +243,23 @@ function handleGetSavedArticles(payload) {
 function handleGetLeaderboard() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("UserStats");
   if (!sheet) return successResponse([]);
-  var data = sheet.getDataRange().getValues();
   var list = data.slice(1).map(function(r){
-    return { name: r[0], score: Number(r[6] || 0) };
-  }).sort(function(a,b){ return b.score - a.score }).slice(0, 10);
+    var extra = {};
+    try { extra = JSON.parse(r[10] || "{}"); } catch(e) {}
+    
+    // 計算精華總量
+    var totalEssence = (extra.essence?.light || 0) + (extra.essence?.rain || 0) + (extra.essence?.soil || 0);
+    // 計算解鎖植物數量
+    var plantCount = String(r[5] || "").split(",").filter(function(p){ return p !== "" }).length;
+
+    return { 
+      name: r[0], 
+      streak: extra.streak || 0,
+      essence: totalEssence,
+      plants: plantCount,
+      exp: Number(r[6] || 0)
+    };
+  });
   return successResponse(list);
 }
 
