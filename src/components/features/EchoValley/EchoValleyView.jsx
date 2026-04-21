@@ -219,8 +219,8 @@ const EchoValleyView = () => {
   const [topicSelectMode, setTopicSelectMode] = useState(false);
   const [pendingSituation, setPendingSituation] = useState(null);
   const [fluencyStats, setFluencyStats] = useState({ messages: 0, totalChars: 0, chineseChars: 0 });
-  const [sttMode, setSttMode] = useState('target'); // 'target' or 'chinese'
   const [sttTranscript, setSttTranscript] = useState(''); // 即時顯示聽到的文字
+  const sttTranscriptRef = useRef(''); // 🌿 關鍵：同步快照，確保秒按時文字不遺失
 
   const recognitionRef = useRef(null);
   const chatEndRef = useRef(null);
@@ -476,11 +476,12 @@ Rules:
 
     rec.onstart = () => setIsPronouncing(true);
     rec.onresult = (e) => {
-      let finalStr = '';
-      for (let i = e.resultIndex; i < e.results.length; ++i) {
-        if (e.results[i].isFinal) finalStr += e.results[i][0].transcript;
+      let currentText = '';
+      for (let i = 0; i < e.results.length; ++i) {
+        currentText += e.results[i][0].transcript;
       }
-      if (finalStr) setSttTranscript(prev => prev + ' ' + finalStr);
+      sttTranscriptRef.current = currentText; // 更新同步快照
+      setSttTranscript(currentText); // 更新 UI
     };
     rec.onerror = (e) => {
       if (e.error !== 'no-speech') toast(`語音辨識錯誤: ${e.error}`);
@@ -488,8 +489,10 @@ Rules:
     };
     rec.onend = () => {
       setIsPronouncing(false);
-      if (sttTranscript.trim()) {
-        analyzePronunciation(practiceTarget.reply, sttTranscript.trim());
+      const finalMsg = sttTranscriptRef.current.trim();
+      if (finalMsg) {
+        analyzePronunciation(practiceTarget.reply, finalMsg);
+        sttTranscriptRef.current = ''; // 清空快照
       }
     };
     rec.start();
@@ -514,14 +517,16 @@ Rules:
     if (!rec) return;
 
     setSttTranscript(''); // 清空目前的預覽文字
+    sttTranscriptRef.current = '';
 
     rec.onstart = () => setIsRecording(true);
     rec.onresult = (e) => {
-      let finalStr = '';
-      for (let i = e.resultIndex; i < e.results.length; ++i) {
-        if (e.results[i].isFinal) finalStr += e.results[i][0].transcript;
+      let currentText = '';
+      for (let i = 0; i < e.results.length; ++i) {
+        currentText += e.results[i][0].transcript;
       }
-      if (finalStr) setSttTranscript(prev => prev + ' ' + finalStr);
+      sttTranscriptRef.current = currentText;
+      setSttTranscript(currentText);
     };
     rec.onerror = (e) => { 
       if (e.error !== 'no-speech') toast(`語音辨識錯誤: ${e.error}`); 
@@ -529,11 +534,13 @@ Rules:
     };
     rec.onend = () => {
       setIsRecording(false);
-      const finalMsg = sttTranscript.trim();
+      const finalMsg = sttTranscriptRef.current.trim();
       if (finalMsg) {
         setMessages(prev => [...prev, { role: 'user', text: finalMsg }]);
         trackFluency(finalMsg);
         sendToGemini(finalMsg);
+        sttTranscriptRef.current = '';
+        setSttTranscript(''); 
       }
     };
     recognitionRef.current = rec;
