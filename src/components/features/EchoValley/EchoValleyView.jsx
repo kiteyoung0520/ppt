@@ -216,6 +216,8 @@ const EchoValleyView = () => {
   const sessionPronounceCountRef = useRef(0);
 
   // Free Talk Coach state
+  const [topicSelectMode, setTopicSelectMode] = useState(false);
+  const [pendingSituation, setPendingSituation] = useState(null);
   const [fluencyStats, setFluencyStats] = useState({ messages: 0, totalChars: 0, chineseChars: 0 });
   const [sttMode, setSttMode] = useState('target'); // 'target' or 'chinese'
   const [sttTranscript, setSttTranscript] = useState(''); // 即時顯示聽到的文字
