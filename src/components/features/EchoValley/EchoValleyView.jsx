@@ -216,10 +216,9 @@ const EchoValleyView = () => {
   const sessionPronounceCountRef = useRef(0);
 
   // Free Talk Coach state
-  const [topicSelectMode, setTopicSelectMode] = useState(false);
-  const [pendingSituation, setPendingSituation] = useState(null);
   const [fluencyStats, setFluencyStats] = useState({ messages: 0, totalChars: 0, chineseChars: 0 });
   const [sttMode, setSttMode] = useState('target'); // 'target' or 'chinese'
+  const [sttTranscript, setSttTranscript] = useState(''); // 即時顯示聽到的文字
 
   const recognitionRef = useRef(null);
   const chatEndRef = useRef(null);
@@ -258,10 +257,9 @@ const EchoValleyView = () => {
       return null;
     }
     const rec = new SpeechRecognition();
-    rec.continuous = false;
-    rec.interimResults = false;
+    rec.continuous = true; // 🌿 改為連續模式：手動按停止才會結束
+    rec.interimResults = true; // 🌿 開啟中間結果：讓使用者即時看到系統抓到的字
     
-    // Use provided langCode, or fallback to sttMode if available, or currentLang
     const targetLang = langCode || (sttMode === 'chinese' ? 'zh-TW' : currentLang.speechCode);
     rec.lang = targetLang;
     
@@ -462,20 +460,36 @@ Rules:
   // ── Record pronunciation attempt ──────────────────────────────────
   const handleRecordPronunciation = () => {
     if (!practiceTarget) return;
+
+    if (isPronouncing && recognitionRef.current) {
+      recognitionRef.current.stop();
+      return;
+    }
+
     const rec = initRecognition(currentLang.speechCode);
     if (!rec) return;
 
-    recognitionRef.current = rec; // 關鍵：記錄實例以供保護機制追蹤
+    recognitionRef.current = rec;
+    setSttTranscript('');
+
     rec.onstart = () => setIsPronouncing(true);
-    rec.onresult = async (e) => {
-      const recognized = e.results[0][0].transcript;
-      await analyzePronunciation(practiceTarget.reply, recognized);
+    rec.onresult = (e) => {
+      let finalStr = '';
+      for (let i = e.resultIndex; i < e.results.length; ++i) {
+        if (e.results[i].isFinal) finalStr += e.results[i][0].transcript;
+      }
+      if (finalStr) setSttTranscript(prev => prev + ' ' + finalStr);
     };
     rec.onerror = (e) => {
       if (e.error !== 'no-speech') toast(`語音辨識錯誤: ${e.error}`);
       setIsPronouncing(false);
     };
-    rec.onend = () => {};
+    rec.onend = () => {
+      setIsPronouncing(false);
+      if (sttTranscript.trim()) {
+        analyzePronunciation(practiceTarget.reply, sttTranscript.trim());
+      }
+    };
     rec.start();
   };
 
@@ -491,24 +505,35 @@ Rules:
   // ── Free mic (no target phrase) ───────────────────────────────────
   const toggleRecording = () => {
     if (isRecording && recognitionRef.current) {
-      recognitionRef.current.stop();
+      recognitionRef.current.stop(); // 🌿 手動點擊第二次：停止錄音並觸發 onend 送出
       return;
     }
-    const rec = initRecognition(); // Will use sttMode internally
+    const rec = initRecognition();
     if (!rec) return;
+
+    setSttTranscript(''); // 清空目前的預覽文字
 
     rec.onstart = () => setIsRecording(true);
     rec.onresult = (e) => {
-      const transcript = e.results[0][0].transcript;
-      setMessages(prev => [...prev, { role: 'user', text: transcript }]);
-      trackFluency(transcript);
-      sendToGemini(transcript);
+      let finalStr = '';
+      for (let i = e.resultIndex; i < e.results.length; ++i) {
+        if (e.results[i].isFinal) finalStr += e.results[i][0].transcript;
+      }
+      if (finalStr) setSttTranscript(prev => prev + ' ' + finalStr);
     };
     rec.onerror = (e) => { 
       if (e.error !== 'no-speech') toast(`語音辨識錯誤: ${e.error}`); 
       setIsRecording(false); 
     };
-    rec.onend = () => setIsRecording(false);
+    rec.onend = () => {
+      setIsRecording(false);
+      const finalMsg = sttTranscript.trim();
+      if (finalMsg) {
+        setMessages(prev => [...prev, { role: 'user', text: finalMsg }]);
+        trackFluency(finalMsg);
+        sendToGemini(finalMsg);
+      }
+    };
     recognitionRef.current = rec;
     rec.start();
   };
@@ -870,13 +895,12 @@ Respond ONLY in strict JSON (no markdown):
                 </button>
                 <button
                   onClick={handleRecordPronunciation}
-                  disabled={isPronouncing}
-                  className={`flex-1 py-2.5 font-bold text-sm rounded-xl flex items-center justify-center gap-2 transition active:scale-95 ${isPronouncing ? 'bg-amber-400 text-white animate-pulse' : 'bg-orange-500 hover:bg-orange-600 text-white shadow-md'}`}
+                  className={`flex-1 py-2.5 font-bold text-sm rounded-xl flex items-center justify-center gap-2 transition active:scale-95 ${isPronouncing ? 'bg-red-500 text-white animate-pulse' : 'bg-orange-500 hover:bg-orange-600 text-white shadow-md'}`}
                 >
                   {isPronouncing ? (
-                    <><span className="animate-bounce">●</span> 分析中...</>
+                    <><span>🛑</span> 結束並評分</>
                   ) : (
-                    <><span>🎤</span> 開始錄音評分</>
+                    <><span>🎤</span> 開始錄音練習</>
                   )}
                 </button>
                 <button onClick={() => { setPracticeTarget(null); setPronunciationResult(null); }}
@@ -922,11 +946,11 @@ Respond ONLY in strict JSON (no markdown):
                   ? 'bg-red-500 text-white ring-4 ring-red-100' 
                   : (sttMode === 'chinese' ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-emerald-600 text-white hover:bg-emerald-700')
               }`}>
-              {isRecording ? '🛑' : '🎙️'}
+              {isRecording ? '📤' : '🎙️'}
             </button>
             {isRecording && (
-              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap bg-stone-800 text-white text-[9px] px-2 py-0.5 rounded-full font-bold animate-bounce shadow-md">
-                正在聽 {sttMode === 'chinese' ? '中文' : currentLang.name}...
+              <div className="absolute -top-12 left-1/2 -translate-x-1/2 whitespace-nowrap bg-stone-800/90 backdrop-blur text-white text-[10px] px-3 py-1.5 rounded-2xl font-bold animate-slideUp shadow-xl border border-white/20 max-w-[250px] overflow-hidden truncate">
+                {sttTranscript || (sttMode === 'chinese' ? '正在聽中文...' : `正在聽 ${currentLang.name}...`)}
               </div>
             )}
           </div>
