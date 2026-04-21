@@ -219,6 +219,7 @@ const EchoValleyView = () => {
   const [topicSelectMode, setTopicSelectMode] = useState(false);
   const [pendingSituation, setPendingSituation] = useState(null);
   const [fluencyStats, setFluencyStats] = useState({ messages: 0, totalChars: 0, chineseChars: 0 });
+  const [sttMode, setSttMode] = useState('target'); // 'target' or 'chinese'
   const [sttTranscript, setSttTranscript] = useState(''); // 即時顯示聽到的文字
   const sttTranscriptRef = useRef(''); // 🌿 關鍵：同步快照，確保秒按時文字不遺失
 
