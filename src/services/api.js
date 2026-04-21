@@ -66,7 +66,8 @@ const MODEL_PRIORITY = [
   "gemini-3.1-flash-lite-preview", 
   "gemini-3-flash-preview",      
   "gemini-2.5-flash",             
-  "gemini-flash-latest",          
+  "gemini-flash-latest",
+  "gemini-1.5-pro",
 ];
 
 export async function* streamGeminiChat(prompt, apiKey) {
