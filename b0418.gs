@@ -29,8 +29,12 @@ function doPost(e) {
       case 'updateUserStats': return handleUpdateUserStats(payload);
       case 'getRandomQuote': return handleGetRandomQuote(payload);
       case 'register': return handleApply(payload);
-      case 'getLeaderboard': return handleGetLeaderboard(payload);
-      case 'saveArticle': return handleSaveArticle(payload);
+      case 'getLeaderboard':
+        return handleGetLeaderboard();
+      case 'getAnnouncements':
+        return handleGetAnnouncements();
+      case 'syncStats':
+        return handleSyncStats(payload);
       case 'getSavedArticles': return handleGetSavedArticles(payload);
       case 'activateAccount': return handleActivateAccount(payload);
       default: return errorResponse("未知的 API Action: " + action);
@@ -265,6 +269,39 @@ function handleGetLeaderboard() {
 
 function handleGetRandomQuote() {
   return successResponse({ eng: "The best way to predict the future is to create it.", chn: "預測未來最好的方法就是創造它。", author: "Peter Drucker" });
+}
+
+/**
+ * 📢 取得系統公告
+ */
+function handleGetAnnouncements() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('Announcements');
+    if (!sheet) return successResponse([]);
+    
+    const rows = sheet.getDataRange().getValues();
+    const data = [];
+    
+    // 從第 2 列開始讀取 (跳過標題)
+    for (let i = 1; i < rows.length; i++) {
+      const [date, type, title, content, active] = rows[i];
+      if (active === true || String(active).toUpperCase() === 'TRUE') {
+        data.push({
+          date: date instanceof Date ? Utilities.formatDate(date, "GMT+8", "yyyy/MM/dd") : date,
+          type: type || "一般",
+          title,
+          content: String(content || "").replace(/\n/g, '<br/>'),
+        });
+      }
+    }
+    
+    // 排序：最新的公告排前面
+    data.reverse();
+    return successResponse(data.slice(0, 5));
+  } catch (e) {
+    return errorResponse(e.toString());
+  }
 }
 
 function successResponse(d) { return ContentService.createTextOutput(JSON.stringify({status: 'success', data: d})).setMimeType(ContentService.MimeType.JSON); }

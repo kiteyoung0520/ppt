@@ -3,6 +3,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useGame, NATIVE_PLANT_DB } from '../../../context/GameContext';
 import { useSettings } from '../../../context/SettingsContext';
 import { toast } from '../../ui/Toast';
+import { callApi } from '../../../services/api';
 
 const ProfileSettingsView = () => {
   const { currentUser, apiKey, updateApiKey } = useAuth();
@@ -12,6 +13,24 @@ const ProfileSettingsView = () => {
   const [inputKey, setInputKey] = useState(apiKey || '');
   const [showKey, setShowKey] = useState(false);
   const [isEditingKey, setIsEditingKey] = useState(false);
+  const [announcements, setAnnouncements] = useState([]);
+  const [expandedId, setExpandedId] = useState(null);
+  const [loadingAnnouncements, setLoadingAnnouncements] = useState(false);
+
+  React.useEffect(() => {
+    const fetchAnnouncements = async () => {
+      setLoadingAnnouncements(true);
+      try {
+        const res = await callApi('getAnnouncements', {});
+        if (res.status === 'success') setAnnouncements(res.data);
+      } catch (e) {
+        console.error("Failed to fetch announcements:", e);
+      } finally {
+        setLoadingAnnouncements(false);
+      }
+    };
+    fetchAnnouncements();
+  }, []);
 
   // Derived stats
   const totalEssence = (stats?.essence?.light || 0) + (stats?.essence?.rain || 0) + (stats?.essence?.soil || 0);
@@ -39,6 +58,52 @@ const ProfileSettingsView = () => {
     <div className="flex flex-col h-full bg-stone-50 rounded-2xl overflow-y-auto custom-scroll shadow-inner border border-stone-200 p-4 sm:p-8 animate-fadeIn">
       <div className="max-w-2xl mx-auto w-full flex flex-col gap-6">
         
+        {/* Section 0: System Announcement Board */}
+        {announcements.length > 0 && (
+          <div className="bg-white border-2 border-stone-200 rounded-3xl overflow-hidden shadow-sm animate-popup-fade">
+            <div className="bg-stone-50 px-6 py-3 border-b-2 border-stone-200 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">📢</span>
+                <span className="font-black text-stone-800 text-sm uppercase tracking-widest">系統佈告欄</span>
+              </div>
+              {loadingAnnouncements && <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>}
+            </div>
+            
+            <div className="divide-y divide-stone-100">
+              {announcements.map((ann, idx) => (
+                <div key={idx} className="group">
+                  <button 
+                    onClick={() => setExpandedId(expandedId === idx ? null : idx)}
+                    className="w-full px-6 py-4 flex items-center justify-between hover:bg-stone-50/80 transition text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-tighter shadow-sm
+                        ${ann.type.includes('重要') || ann.type.includes('緊急') || ann.type.includes('Hot')
+                          ? 'bg-red-500 text-white animate-pulse' 
+                          : 'bg-emerald-100 text-emerald-700'
+                        }`}>
+                        {ann.type}
+                      </span>
+                      <h4 className="font-bold text-stone-700 text-sm sm:text-base group-hover:text-emerald-700 transition">{ann.title}</h4>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-[10px] text-stone-300 font-mono hidden sm:inline">{ann.date}</span>
+                      <span className={`text-stone-300 transition-transform duration-300 ${expandedId === idx ? 'rotate-180' : ''}`}>▼</span>
+                    </div>
+                  </button>
+                  
+                  {expandedId === idx && (
+                    <div className="px-6 pb-6 pt-1 animate-slideUp text-sm text-stone-500 font-chn leading-relaxed border-t border-stone-50 bg-stone-50/30">
+                      <div className="text-[10px] text-stone-300 mb-3 block sm:hidden">{ann.date}</div>
+                      <div dangerouslySetInnerHTML={{ __html: ann.content }} />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Section 1: Identity Card */}
         <div className="bg-gradient-to-br from-[#0f172a] to-[#1e293b] rounded-3xl p-6 sm:p-8 shadow-xl text-center relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
