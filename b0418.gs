@@ -247,6 +247,7 @@ function handleGetSavedArticles(payload) {
 function handleGetLeaderboard() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("UserStats");
   if (!sheet) return successResponse([]);
+  var data = sheet.getDataRange().getValues();
   var list = data.slice(1).map(function(r){
     var extra = {};
     try { extra = JSON.parse(r[10] || "{}"); } catch(e) {}
