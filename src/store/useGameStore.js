@@ -216,24 +216,32 @@ export const useGameStore = create(
             const cloudStats = res.data.stats || {};
             const cloudWords = Array.isArray(res.data.savedWords) ? res.data.savedWords : [];
             
-            set((state) => ({ 
-              stats: { ...state.stats, ...cloudStats },
-              streak: cloudStats.streak ?? state.streak,
-              lastStudyDate: cloudStats.lastStudyDate ?? state.lastStudyDate,
-              savedWords: cloudWords.length > 0 ? cloudWords : state.savedWords
-            }));
+            set((state) => {
+              // 🌿 智慧型合併邏輯 (Smart Merge)
+              // 如果本地的學習日期比雲端更「新」，則保留本地的連勝狀態，避免被舊存檔覆蓋
+              const localIsNewer = state.lastStudyDate && (!cloudStats.lastStudyDate || new Date(state.lastStudyDate) > new Date(cloudStats.lastStudyDate));
+              
+              const finalStreak = localIsNewer ? state.streak : (cloudStats.streak ?? state.streak);
+              const finalLastStudy = localIsNewer ? state.lastStudyDate : (cloudStats.lastStudyDate ?? state.lastStudyDate);
 
-            // 🌿 將雲端設定寫回 localStorage，讓 SettingsContext 下次載入時自動恢復
+              return { 
+                stats: { ...state.stats, ...cloudStats },
+                streak: finalStreak,
+                lastStudyDate: finalLastStudy,
+                savedWords: cloudWords.length > 0 ? cloudWords : state.savedWords
+              };
+            });
+
+            // 🌿 將雲端設定寫回 localStorage
             if (cloudStats.settings) {
-              if (cloudStats.settings.targetLangKey) {
-                localStorage.setItem('flg-targetLang', cloudStats.settings.targetLangKey);
-              }
-              if (cloudStats.settings.speechRate) {
-                localStorage.setItem('flg-speechRate', String(cloudStats.settings.speechRate));
-              }
+              if (cloudStats.settings.targetLangKey) localStorage.setItem('flg-targetLang', cloudStats.settings.targetLangKey);
+              if (cloudStats.settings.speechRate) localStorage.setItem('flg-speechRate', String(cloudStats.settings.speechRate));
             }
+
+            // 🌿 關鍵：同步後立即重新校準一次連勝狀態
+            get().recordActivity();
             
-            console.log("Store: 雲端數據同步完成", cloudStats);
+            console.log("Store: 雲端數據智慧同步完成");
           }
         } catch (e) {
           console.error("Store: Failed to refresh stats:", e);
