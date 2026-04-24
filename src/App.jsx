@@ -39,11 +39,11 @@ const MainApp = () => {
 function App() {
   return (
     <AuthProvider>
-      <GameProvider>
-        <SettingsProvider>
+      <SettingsProvider>
+        <GameProvider>
           <MainApp />
-        </SettingsProvider>
-      </GameProvider>
+        </GameProvider>
+      </SettingsProvider>
     </AuthProvider>
   );
 }
