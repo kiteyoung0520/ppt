@@ -178,10 +178,10 @@ const PronunciationPanel = ({ result, targetPhrase, onResend, onRetry, onDismiss
 
     {/* Actions */}
     <div className="flex gap-2">
-      <button onClick={onRetry} className="flex-1 py-2 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 font-bold text-xs rounded-xl transition">
+      <button onClick={() => { unlockAudio(); onRetry(); }} className="flex-1 py-2 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 font-bold text-xs rounded-xl transition">
         🔄 再練一次
       </button>
-      <button onClick={onResend} className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition">
+      <button onClick={() => { unlockAudio(); onResend(); }} className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition">
         ✅ 送出此句繼續
       </button>
     </div>
@@ -289,6 +289,7 @@ const EchoValleyView = () => {
   };
 
   const handleStartSituation = (sit) => {
+    unlockAudio(); // 🌿 點擊情境按鈕解鎖
     if (sit.isFreeTalk) {
       setPendingSituation(sit);
       setTopicSelectMode(true);
@@ -314,6 +315,7 @@ const EchoValleyView = () => {
   };
 
   const startFreeTalkSession = (topic) => {
+    unlockAudio(); // 🌿 選定話題時解鎖
     setTopicSelectMode(false);
     const coachPrompt = buildCoachPrompt(currentLang.promptName, topic.hint);
     const enrichedSit = {
@@ -510,9 +512,10 @@ Rules:
 
   // ── After analysis: confirm send ─────────────────────────────────
   const commitSuggestion = (sug) => {
+    unlockAudio(); // 🌿 點擊建議回應時解鎖音訊
     setPracticeTarget(null);
     setPronunciationResult(null);
-    setMessages(prev => [...prev, { role: 'user', text: sug.reply }]);
+    setMessages(prev => [...prev, { role: 'user', text: sug.reply, translation: sug.translation }]);
     trackFluency(sug.reply);
     sendToGemini(sug.reply);
   };
@@ -560,6 +563,7 @@ Rules:
 
   // ─── SOS Coach Request (Proposal 2) ─────────────────────────────
   const handleSosRequest = async () => {
+    unlockAudio();
     const lastNpc = [...messages].reverse().find(m => m.role === 'npc');
     if (!lastNpc) return;
     setIsSosLoading(true);
@@ -591,6 +595,7 @@ Respond ONLY in strict JSON (no markdown):
 
   // ─── Exit Session → Generate Report (Proposal 3) ─────────────────
   const handleExitSession = async () => {
+    unlockAudio();
     const userMessages = messages.filter(m => m.role === 'user');
     const mistakes = messages.filter(m => m.role === 'user' && m.coach);
     const durationSecs = sessionStartRef.current ? Math.round((Date.now() - sessionStartRef.current) / 1000) : 0;
