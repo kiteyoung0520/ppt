@@ -222,6 +222,16 @@ export const useGameStore = create(
               lastStudyDate: cloudStats.lastStudyDate ?? state.lastStudyDate,
               savedWords: cloudWords.length > 0 ? cloudWords : state.savedWords
             }));
+
+            // 🌿 將雲端設定寫回 localStorage，讓 SettingsContext 下次載入時自動恢復
+            if (cloudStats.settings) {
+              if (cloudStats.settings.targetLangKey) {
+                localStorage.setItem('flg-targetLang', cloudStats.settings.targetLangKey);
+              }
+              if (cloudStats.settings.speechRate) {
+                localStorage.setItem('flg-speechRate', String(cloudStats.settings.speechRate));
+              }
+            }
             
             console.log("Store: 雲端數據同步完成", cloudStats);
           }

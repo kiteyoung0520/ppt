@@ -35,6 +35,7 @@ function doPost(e) {
         return handleGetAnnouncements();
       case 'syncStats':
         return handleSyncStats(payload);
+      case 'saveArticle': return handleSaveArticle(payload);
       case 'getSavedArticles': return handleGetSavedArticles(payload);
       case 'activateAccount': return handleActivateAccount(payload);
       default: return errorResponse("未知的 API Action: " + action);
@@ -173,7 +174,8 @@ function fetchUserStatsInternal(userId) {
           unlockedPlants: String(vals[5]).split(","),
           essence: extra.essence || {light:0, rain:0, soil:0},
           streak: extra.streak || 0,
-          lastStudyDate: extra.lastStudyDate || null
+          lastStudyDate: extra.lastStudyDate || null,
+          settings: extra.settings || {}
         };
       } catch(e) {}
     }
@@ -213,7 +215,8 @@ function updateUserStatsInternal(uid, stats, words) {
     var extra = JSON.stringify({ 
       essence: stats.essence, 
       streak: stats.streak,
-      lastStudyDate: stats.lastStudyDate 
+      lastStudyDate: stats.lastStudyDate,
+      settings: stats.settings || {}
     });
     var row = [uid, stats.coins, stats.currentPlant, stats.plantStage, 0, stats.unlockedPlants.join(","), stats.exp, "", "", "", extra];
     if (f) sSheet.getRange(f.getRow(), 1, 1, 11).setValues([row]);

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { useAuth } from './AuthContext';
+import { useSettings } from './SettingsContext';
 import { callApi } from '../services/api';
 
 const GameContext = createContext(null);
@@ -8,6 +9,7 @@ const GameContext = createContext(null);
 export const GameProvider = ({ children }) => {
   const game = useGameStore();
   const { currentUser, apiKey } = useAuth();
+  const { targetLangKey, speechRate } = useSettings();
 
   // 1. 初始載入與遷移
   useEffect(() => {
@@ -29,7 +31,8 @@ export const GameProvider = ({ children }) => {
           stats: {
             ...game.stats,
             streak: game.streak,
-            lastStudyDate: game.lastStudyDate
+            lastStudyDate: game.lastStudyDate,
+            settings: { targetLangKey, speechRate } // 🌿 同步語言設定到雲端
           },
           savedWords: game.savedWords
         }, apiKey);
@@ -40,7 +43,7 @@ export const GameProvider = ({ children }) => {
     }, 3000);
 
     return () => clearTimeout(syncTimeout);
-  }, [game.stats, game.savedWords, game.streak, currentUser, apiKey]);
+  }, [game.stats, game.savedWords, game.streak, targetLangKey, speechRate, currentUser, apiKey]);
 
   // 3. 登出清理
   useEffect(() => {

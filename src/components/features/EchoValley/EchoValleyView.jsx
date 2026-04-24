@@ -190,9 +190,9 @@ const PronunciationPanel = ({ result, targetPhrase, onResend, onRetry, onDismiss
 
 // ── Main Echo Valley View ───────────────────────────────────────────
 const EchoValleyView = () => {
-  const { currentLang, speechRate } = useSettings();
+  const { currentLang, speechRate, targetLangKey } = useSettings();
   const { apiKey } = useAuth();
-  const { recordActivity, addEssence } = useGame();
+  const { recordActivity, addEssence, saveWord } = useGame();
 
   const [activeSituation, setActiveSituation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -211,6 +211,43 @@ const EchoValleyView = () => {
       u.volume = 0;
       window.speechSynthesis.speak(u);
     }
+  };
+
+  // 🌿 Fix 3: 詞彙快速收藏狀態
+  const [vocabPanel, setVocabPanel] = useState({ idx: null, loading: false, words: [] });
+
+  const extractVocab = async (text, idx) => {
+    // 若再次點擊同一條訊息，則收起詞彙面板
+    if (vocabPanel.idx === idx && !vocabPanel.loading) {
+      setVocabPanel({ idx: null, loading: false, words: [] });
+      return;
+    }
+    setVocabPanel({ idx, loading: true, words: [] });
+    try {
+      const prompt = `Extract 2-3 key vocabulary words from this ${currentLang.promptName} sentence: "${text}"
+Return ONLY pure JSON (no markdown):
+{"words": [{"word": "example", "pronunciation": "/ɪɡˈzæmpəl/", "meaning": "中文意思", "example": "${text}"}]}`;
+      const stream = streamGeminiChat(prompt, apiKey);
+      let raw = '';
+      for await (const chunk of stream) raw += chunk;
+      const parsed = safeParseJSON(raw);
+      setVocabPanel({ idx, loading: false, words: parsed.words || [] });
+    } catch (e) {
+      toast('詞彙提取失敗：' + e.message);
+      setVocabPanel({ idx: null, loading: false, words: [] });
+    }
+  };
+
+  const handleSaveVocabWord = (w) => {
+    saveWord({
+      word: w.word,
+      pronunciation: w.pronunciation || '',
+      meaning: w.meaning || '',
+      langKey: targetLangKey,
+      exampleSentence: w.example || '',
+      exampleTranslation: ''
+    });
+    toast(`✨ 已收藏「${w.word}」到單字本！`);
   };
 
   // SOS Coach state (Proposal 2)
@@ -818,13 +855,38 @@ Respond ONLY in strict JSON (no markdown):
               <div className="flex items-start gap-2">
                 <div className="flex-1 text-base font-eng">{m.text}</div>
                 {m.role === 'npc' && (
-                  <button onClick={() => speakText(m.text)} className="shrink-0 text-stone-300 hover:text-emerald-500 text-sm mt-0.5">🔊</button>
+                  <>
+                    <button onClick={() => speakText(m.text)} className="shrink-0 text-stone-300 hover:text-emerald-500 text-sm mt-0.5" title="朗讀">🔊</button>
+                    <button onClick={() => extractVocab(m.text, idx)} className="shrink-0 text-stone-300 hover:text-blue-500 text-sm mt-0.5" title="提取詞彙">
+                      {vocabPanel.idx === idx && vocabPanel.loading ? '⏳' : '📖'}
+                    </button>
+                  </>
                 )}
               </div>
               {m.translation && <div className={`text-xs font-chn pt-1 mt-1 border-t ${m.role === 'user' ? 'text-emerald-100 border-emerald-400/50' : 'text-stone-400 border-stone-100'}`}>{m.translation}</div>}
             </div>
 
-            {/* Grammar Coach Feedback */}
+            {/* 🌿 Fix 3: 詞彙快速收藏面板 */}
+            {m.role === 'npc' && vocabPanel.idx === idx && !vocabPanel.loading && vocabPanel.words.length > 0 && (
+              <div className="mt-2 ml-2 w-full max-w-[90%] bg-blue-50 border border-blue-200 rounded-2xl p-3 animate-slideUp shadow-sm">
+                <div className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-2">📖 本句關鍵詞彙</div>
+                <div className="flex flex-col gap-2">
+                  {vocabPanel.words.map((w, wIdx) => (
+                    <div key={wIdx} className="flex items-center justify-between bg-white border border-blue-100 rounded-xl px-3 py-2">
+                      <div className="flex-1 min-w-0">
+                        <span className="font-bold text-sm text-stone-800 font-eng mr-2">{w.word}</span>
+                        <span className="text-xs text-orange-500 mr-2">{w.pronunciation}</span>
+                        <span className="text-xs text-stone-500 font-chn">{w.meaning}</span>
+                      </div>
+                      <button
+                        onClick={() => handleSaveVocabWord(w)}
+                        className="shrink-0 ml-2 px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 text-[10px] font-black rounded-lg transition active:scale-95"
+                      >+ 收藏</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             {m.role === 'user' && m.coach && (
               <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-2xl max-w-[80%] shadow-sm animate-slideUp text-left self-end">
                 <div className="flex items-center gap-2 mb-2">
