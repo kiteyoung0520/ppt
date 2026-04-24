@@ -201,8 +201,17 @@ const EchoValleyView = () => {
 
   // Pronunciation practice state
   const [practiceTarget, setPracticeTarget] = useState(null);
-  const [isPronouncing, setIsPronouncing] = useState(false);
   const [pronunciationResult, setPronunciationResult] = useState(null);
+  const [isPronouncing, setIsPronouncing] = useState(false);
+
+  // 🌿 行動裝置音訊解鎖：在使用者點擊麥克風時先播一個極短靜音
+  const unlockAudio = () => {
+    if ('speechSynthesis' in window) {
+      const u = new SpeechSynthesisUtterance("");
+      u.volume = 0;
+      window.speechSynthesis.speak(u);
+    }
+  };
 
   // SOS Coach state (Proposal 2)
   const [sosMode, setSosMode] = useState(false);
@@ -510,8 +519,9 @@ Rules:
 
   // ── Free mic (no target phrase) ───────────────────────────────────
   const toggleRecording = () => {
-    if (isRecording && recognitionRef.current) {
-      recognitionRef.current.stop(); // 🌿 手動點擊第二次：停止錄音並觸發 onend 送出
+    unlockAudio(); // 🌿 點擊瞬間立刻解鎖手機音訊限制
+    if (isRecording) {
+      if (recognitionRef.current) recognitionRef.current.stop();
       return;
     }
     const rec = initRecognition();
