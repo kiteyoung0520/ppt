@@ -16,6 +16,12 @@ const ProfileSettingsView = () => {
   const [announcements, setAnnouncements] = useState([]);
   const [expandedId, setExpandedId] = useState(null);
   const [loadingAnnouncements, setLoadingAnnouncements] = useState(false);
+  
+  // 🌿 Fix 1: 意見回饋狀態
+  const [feedbackContent, setFeedbackContent] = useState('');
+  const [feedbackType, setFeedbackType] = useState('建議');
+  const [isSendingFeedback, setIsSendingFeedback] = useState(false);
+  const [showFeedbackForm, setShowFeedbackForm] = useState(false);
 
   React.useEffect(() => {
     const fetchAnnouncements = async () => {
@@ -52,6 +58,31 @@ const ProfileSettingsView = () => {
     updateApiKey(inputKey);
     setIsEditingKey(false);
     toast('✅ API Key 已更新，將自動套用至所有 AI 功能！');
+  };
+
+  const handleSendFeedback = async () => {
+    if (!feedbackContent.trim()) {
+      toast('請輸入回饋內容');
+      return;
+    }
+    setIsSendingFeedback(true);
+    try {
+      const res = await callApi('sendFeedback', { 
+        userId: currentUser, 
+        apiKey,
+        type: feedbackType,
+        content: feedbackContent 
+      }, apiKey);
+      if (res.status === 'success') {
+        toast('✨ 您的意見已送達語林守護者！');
+        setFeedbackContent('');
+        setShowFeedbackForm(false);
+      }
+    } catch (e) {
+      toast('傳送失敗：' + e.message);
+    } finally {
+      setIsSendingFeedback(false);
+    }
   };
 
   return (
@@ -241,7 +272,74 @@ const ProfileSettingsView = () => {
               此設定將全域套用於：隨身口譯、閱讀室朗讀、單字發音及迴音谷對話。
             </p>
           </div>
+        </div>
 
+        {/* Section 4: Gardener's Mailbox */}
+        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-stone-200 mb-8">
+          <div className="flex items-center justify-between mb-6 border-b border-stone-100 pb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">📩</span>
+              <h3 className="font-black text-stone-800 text-lg uppercase tracking-wider">語林信箱</h3>
+            </div>
+            {!showFeedbackForm && (
+              <button 
+                onClick={() => setShowFeedbackForm(true)}
+                className="text-xs font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full hover:bg-emerald-100 transition"
+              >
+                寫信給管理員
+              </button>
+            )}
+          </div>
+
+          {!showFeedbackForm ? (
+            <div className="text-center py-4">
+              <p className="text-sm text-stone-400 font-chn leading-relaxed">
+                對程式有任何建議或發現錯誤嗎？<br/>
+                您的回饋是語林之境成長的養分。
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4 animate-slideUp">
+              <div className="flex gap-2">
+                {['建議', '錯誤', '問題', '其他'].map(type => (
+                  <button
+                    key={type}
+                    onClick={() => setFeedbackType(type)}
+                    className={`flex-1 py-2 rounded-xl text-xs font-black transition ${feedbackType === type ? 'bg-emerald-500 text-white shadow-md' : 'bg-stone-100 text-stone-500 hover:bg-stone-200'}`}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+              
+              <textarea
+                value={feedbackContent}
+                onChange={(e) => setFeedbackContent(e.target.value)}
+                placeholder="請描述您的想法或遇到的問題..."
+                rows="4"
+                className="w-full bg-stone-50 border-2 border-stone-200 rounded-2xl p-4 text-stone-700 font-chn focus:outline-none focus:ring-8 focus:ring-emerald-400/10 focus:border-emerald-400 transition text-sm leading-relaxed"
+              />
+              
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setShowFeedbackForm(false)}
+                  disabled={isSendingFeedback}
+                  className="flex-1 py-3 bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold rounded-2xl transition active:scale-95 text-sm"
+                >
+                  取消
+                </button>
+                <button 
+                  onClick={handleSendFeedback}
+                  disabled={isSendingFeedback}
+                  className="flex-[2] py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl shadow-lg transition active:scale-95 flex items-center justify-center gap-2 text-sm"
+                >
+                  {isSendingFeedback ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  ) : '📮 送出回饋'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
       </div>

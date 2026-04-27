@@ -26,18 +26,17 @@ function doPost(e) {
     switch (action) {
       case 'login': return handleLogin(payload);
       case 'getUserStats': return handleGetUserStats(payload);
-      case 'updateUserStats': return handleUpdateUserStats(payload);
+      case 'syncStats': 
+      case 'updateUserStats': 
+        return handleUpdateUserStats(payload);
       case 'getRandomQuote': return handleGetRandomQuote(payload);
       case 'register': return handleApply(payload);
-      case 'getLeaderboard':
-        return handleGetLeaderboard();
-      case 'getAnnouncements':
-        return handleGetAnnouncements();
-      case 'syncStats':
-        return handleSyncStats(payload);
+      case 'getLeaderboard': return handleGetLeaderboard();
+      case 'getAnnouncements': return handleGetAnnouncements();
       case 'saveArticle': return handleSaveArticle(payload);
       case 'getSavedArticles': return handleGetSavedArticles(payload);
       case 'activateAccount': return handleActivateAccount(payload);
+      case 'sendFeedback': return handleSendFeedback(payload);
       default: return errorResponse("未知的 API Action: " + action);
     }
   } catch (err) {
@@ -47,6 +46,59 @@ function doPost(e) {
 
 function doGet(e) {
   return HtmlService.createHtmlOutput("Formosa LinguaGarden API is running.");
+}
+
+/**
+ * 🛠️ 管理員選單：自動在打開試算表時載入
+ */
+function onOpen() {
+  var ui = SpreadsheetApp.getUi();
+  ui.createMenu('🌿 語林管理')
+    .addItem('✨ 為選中列續約 30 天', 'adminExtendMembership')
+    .addItem('🔑 重設選中列密碼為 1234', 'adminResetPassword')
+    .addSeparator()
+    .addItem('📩 查看意見回饋看板', 'adminViewFeedback')
+    .addToUi();
+}
+
+function adminViewFeedback() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Feedback") || ss.insertSheet("Feedback");
+  ss.setActiveSheet(sheet);
+}
+
+function adminExtendMembership() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
+  var range = sheet.getActiveRange();
+  var row = range.getRow();
+  
+  if (row <= 1) {
+    SpreadsheetApp.getUi().alert("❌ 請先選中一個園丁的資料列！");
+    return;
+  }
+
+  var expiryCell = sheet.getRange(row, 6); // 第 6 欄是到期日
+  var currentExpiry = expiryCell.getValue();
+  var baseDate = (currentExpiry && currentExpiry instanceof Date) ? currentExpiry : new Date();
+  
+  var newExpiry = new Date(baseDate);
+  newExpiry.setDate(newExpiry.getDate() + 30);
+  
+  expiryCell.setValue(newExpiry);
+  expiryCell.setBackground("#d1fae5"); // 標註為已續約顏色
+  
+  SpreadsheetApp.getUi().alert("✅ 續約成功！\n園丁：" + sheet.getRange(row, 1).getValue() + "\n新到期日：" + Utilities.formatDate(newExpiry, "GMT+8", "yyyy-MM-dd"));
+}
+
+function adminResetPassword() {
+  var ui = SpreadsheetApp.getUi();
+  var response = ui.alert('確認', '確定要將此園丁密碼重設為 1234 嗎？', ui.ButtonSet.YES_NO);
+  if (response == ui.Button.YES) {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
+    var row = sheet.getActiveRange().getRow();
+    sheet.getRange(row, 2).setValue("1234");
+    ui.alert("✅ 密碼已重設。");
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -248,27 +300,51 @@ function handleGetSavedArticles(payload) {
 }
 
 function handleGetLeaderboard() {
+  const cache = CacheService.getScriptCache();
+  const cachedData = cache.get("FLG_LEADERBOARD_V1");
+  if (cachedData) {
+    return ContentService.createTextOutput(cachedData).setMimeType(ContentService.MimeType.JSON);
+  }
+
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("UserStats");
   if (!sheet) return successResponse([]);
-  var data = sheet.getDataRange().getValues();
-  var list = data.slice(1).map(function(r){
+  
+  // 效能優化：只讀取有資料的範圍
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return successResponse([]);
+  
+  var data = sheet.getRange(2, 1, lastRow - 1, 11).getValues();
+  var list = data.map(function(r){
     var extra = {};
     try { extra = JSON.parse(r[10] || "{}"); } catch(e) {}
     
-    // 計算精華總量
     var totalEssence = (extra.essence?.light || 0) + (extra.essence?.rain || 0) + (extra.essence?.soil || 0);
-    // 計算解鎖植物數量
     var plantCount = String(r[5] || "").split(",").filter(function(p){ return p !== "" }).length;
 
     return { 
       name: r[0], 
-      streak: extra.streak || 0,
+      streak: Number(extra.streak || 0),
       essence: totalEssence,
       plants: plantCount,
       exp: Number(r[6] || 0)
     };
   });
-  return successResponse(list);
+
+  // 伺服器端預排序，減輕手機負擔
+  // 預設按連勝排序，前端可再二次排序
+  list.sort(function(a, b) { return b.streak - a.streak; });
+
+  // 分片讀取：只取前 50 名，大幅減少流量
+  var shardedList = list.slice(0, 50);
+  
+  var finalResponse = JSON.stringify({status: 'success', data: shardedList});
+  
+  // 存入快取 (300 秒 = 5 分鐘)
+  try {
+    cache.put("FLG_LEADERBOARD_V1", finalResponse, 300);
+  } catch(e) {}
+
+  return ContentService.createTextOutput(finalResponse).setMimeType(ContentService.MimeType.JSON);
 }
 
 function handleGetRandomQuote() {
@@ -306,6 +382,23 @@ function handleGetAnnouncements() {
   } catch (e) {
     return errorResponse(e.toString());
   }
+}
+
+function handleSendFeedback(payload) {
+  var auth = verifyUserAndGetRow(payload.userId, payload.apiKey);
+  if (auth.error) return errorResponse(auth.error);
+  
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Feedback") || ss.insertSheet("Feedback");
+  
+  // 如果是新表，建立標題
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(["時間", "園丁ID", "類別", "回饋內容", "處理狀態", "備註"]);
+    sheet.getRange(1, 1, 1, 6).setBackground("#f3f4f6").setFontWeight("bold");
+  }
+  
+  sheet.appendRow([new Date(), payload.userId, payload.type || "一般", payload.content, "待處理", ""]);
+  return successResponse({ success: true });
 }
 
 function successResponse(d) { return ContentService.createTextOutput(JSON.stringify({status: 'success', data: d})).setMimeType(ContentService.MimeType.JSON); }
