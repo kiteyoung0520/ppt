@@ -65,16 +65,48 @@ export const NATIVE_PLANT_DB = [
 // 🌿 福爾摩沙遠征地圖節點定義 (三階段大富翁棋盤)
 // stage: 0=未知 1=知識喚醒(輪廓) 2=靈氣灌注中 3=完全復興
 export const FORMOSA_MAP_NODES = [
-  { id: 0, name: "起點：台北", region: "北部", type: "start", emoji: "🏛️", auraRequired: 0, finalCost: {}, description: "語林冒險的起點，這裡充滿了尋語者的氣息。" },
+  { 
+    id: 0, name: "起點：台北", region: "北部", type: "start", emoji: "🏛️", auraRequired: 0, finalCost: {}, 
+    description: "語林冒險的起點，這裡充滿了尋語者的氣息。",
+    history: "台北，意為「台灣之北」。自清代建府以來，一直是政經文化中心。從清代的城門、日治時期的紅磚建築到現代摩天大樓，這裡記錄了島嶼百年來的轉型與蛻變。"
+  },
   { id: 1, name: "陽明山", region: "北部", type: "chance", emoji: "♨️", auraRequired: 0, finalCost: {}, description: "硫磺與迷霧交織，或許會遇到神祕的靈力事件？" },
-  { id: 2, name: "九份山城", region: "北部", type: "revival", emoji: "🏮", auraRequired: 20, finalCost: { light: 100 }, description: "昔日的黃金之城，等待尋語者重新點亮紅燈籠。" },
+  { 
+    id: 2, name: "九份山城", region: "北部", type: "revival", emoji: "🏮", auraRequired: 20, finalCost: { light: 100 }, 
+    description: "昔日的黃金之城，等待尋語者重新點亮紅燈籠。",
+    history: "九份曾因產金而繁華，被譽為「小上海」。隨著金礦枯竭而沉寂，後因電影與獨特建築重新甦醒。這裡的窄巷與石階，每一處都藏著礦工家族與藝術家的舊夢。"
+  },
   { id: 3, name: "竹科綠廊", region: "北部", type: "fate", emoji: "🧪", auraRequired: 0, finalCost: {}, description: "科技與自然的交匯，這裡的能量波動很不穩定。" },
-  { id: 4, name: "阿里山", region: "中部", type: "revival", emoji: "🚂", auraRequired: 35, finalCost: { soil: 200 }, description: "神木守護的森林，需要深厚的土地精華才能喚醒。" },
-  { id: 5, name: "日月潭", region: "中部", type: "revival", emoji: "🛶", auraRequired: 35, finalCost: { rain: 200 }, description: "湖光山色，這裡是雨露精華最純淨的地方。" },
-  { id: 6, name: "安平古堡", region: "南部", type: "revival", emoji: "🏰", auraRequired: 50, finalCost: { light: 150, soil: 150 }, description: "歷史的基石，唯有智慧能重現古都的光輝。" },
-  { id: 7, name: "墾丁南灣", region: "南部", type: "revival", emoji: "🏝️", auraRequired: 50, finalCost: { rain: 300 }, description: "熱情的陽光與海洋，需要大量雨露來維持生態平衡。" },
-  { id: 8, name: "太魯閣峽谷", region: "東部", type: "revival", emoji: "⛰️", auraRequired: 70, finalCost: { light: 300, rain: 200 }, description: "大理石般的意志，唯有最強大的精華能復興此地。" },
-  { id: 9, name: "台東三仙台", region: "東部", type: "final", emoji: "🌉", auraRequired: 100, finalCost: { light: 500, rain: 500, soil: 500 }, description: "傳說中仙人留下的足跡，語林之境的終極復興目標。" }
+  { 
+    id: 4, name: "阿里山", region: "中部", type: "revival", emoji: "🚂", auraRequired: 35, finalCost: { soil: 200 }, 
+    description: "神木守護的森林，需要深厚的土地精華才能喚醒。",
+    history: "阿里山以「五奇」（森林鐵路、神木、雲海、日出、晚霞）聞名。這裡曾是鄒族原住民的獵場，後在日治時期發展林業。千年紅檜在此靜靜守候，見證了自然力量與人類足跡的交織。"
+  },
+  { 
+    id: 5, name: "日月潭", region: "中部", type: "revival", emoji: "🛶", auraRequired: 35, finalCost: { rain: 200 }, 
+    description: "湖光山色，這裡是雨露精華最純淨的地方。",
+    history: "日月潭是台灣最大的淡水湖，為邵族原住民的聖地。其名源於湖水北半部形如日輪，南半部形如月鉤。這裡的水利發電史曾推動了島嶼的現代化進程。"
+  },
+  { 
+    id: 6, name: "安平古堡", region: "南部", type: "revival", emoji: "🏰", auraRequired: 50, finalCost: { light: 150, soil: 150 }, 
+    description: "歷史的基石，唯有智慧能重現古都的光輝。",
+    history: "安平古堡（熱蘭遮城）建於1624年，是台灣最早的城郭。它經歷了荷蘭統治、鄭氏王朝、清領與日治時期，是島嶼邁向國際貿易舞台的首站，紅磚牆內刻滿了四百年的滄桑。"
+  },
+  { 
+    id: 7, name: "墾丁南灣", region: "南部", type: "revival", emoji: "🏝️", auraRequired: 50, finalCost: { rain: 300 }, 
+    description: "熱情的陽光與海洋，需要大量雨露來維持生態平衡。",
+    history: "墾丁（Kenting）意為「開墾的壯丁」。這裡是台灣唯一熱帶區域，擁有豐富的珊瑚礁地形與熱帶雨林。古老的排灣族與早期漢人開墾者在這裡共生，留下豐富的南島文化遺緒。"
+  },
+  { 
+    id: 8, name: "太魯閣峽谷", region: "東部", type: "revival", emoji: "⛰️", auraRequired: 70, finalCost: { light: 300, rain: 200 }, 
+    description: "大理石般的意志，唯有最強大的精華能復興此地。",
+    history: "太魯閣（Taroko）意為「偉大的山脈」。壯麗的大理岩峽谷是由立霧溪千萬年的切割與板塊抬升而成。這裡是太魯閣族的故鄉，他們在絕壁間建立家園，展現了極致的生存勇氣。"
+  },
+  { 
+    id: 9, name: "台東三仙台", region: "東部", type: "final", emoji: "🌉", auraRequired: 100, finalCost: { light: 500, rain: 500, soil: 500 }, 
+    description: "傳說中仙人留下的足跡，語林之境的終極復興目標。",
+    history: "三仙台由三座火山碎屑岩小島組成，傳說呂洞賓、鐵拐李、何仙姑曾在此休憩而得名。八拱跨海步橋如同巨龍臥海，這裡是台灣本島迎接第一道曙光的地方，象徵著希望與圓滿。"
+  }
 ];
 
 export const useGameStore = create(

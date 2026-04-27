@@ -2,11 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useGame, NATIVE_PLANT_DB } from '../../../context/GameContext';
 import { FORMOSA_MAP_NODES } from '../../../store/useGameStore';
 import { useAuth } from '../../../context/AuthContext';
+import { useSettings } from '../../../context/SettingsContext';
 import { toast } from '../../ui/Toast';
 
 const ChroniclesView = () => {
   const { stats, rollDice, earnDice, completeStage1, completeStage3, plantTreeInNode, addEssence } = useGame();
   const { apiKey } = useAuth();
+  const { currentLang } = useSettings();
 
   const DEFAULT_EXPEDITION = { currentNode: 0, diceRemaining: 5, nodeProgress: { 0: { stage: 3, aura: 0 } }, plantedTrees: {} };
   const DEFAULT_ESSENCE = { light: 0, rain: 0, soil: 0 };
@@ -25,8 +27,13 @@ const ChroniclesView = () => {
   const [selectedNode, setSelectedNode] = useState(null);
   const [showEvent, setShowEvent] = useState(null);
 
+  // 🎯 歷史翻譯狀態
+  const [historyTranslation, setHistoryTranslation] = useState(null);
+  const [transLoading, setTransLoading] = useState(false);
+
   // 🎯 挑戰系統狀態
   const [challenge, setChallenge] = useState(null);
+  // ... (其餘狀態保持不變)
   const [challengeLoading, setChallengeLoading] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [challengeResult, setChallengeResult] = useState(null);
@@ -35,6 +42,35 @@ const ChroniclesView = () => {
   const [challengePassed, setChallengePassed] = useState(false);
 
   const scrollRef = useRef(null);
+
+  // 🤖 翻譯歷史沿革
+  useEffect(() => {
+    if (selectedNode !== null && getStage(selectedNode) === 3 && FORMOSA_MAP_NODES[selectedNode]?.history) {
+      const node = FORMOSA_MAP_NODES[selectedNode];
+      const translateHistory = async () => {
+        if (!apiKey) return;
+        setTransLoading(true);
+        setHistoryTranslation(null);
+        try {
+          const prompt = `Translate the following Traditional Chinese historical text about "${node.name}" into ${currentLang?.label || 'English'}. Keep the tone professional yet engaging for a language learner. Return ONLY the translation text without any extra notes.\n\nText: ${node.history}`;
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+          });
+          const data = await res.json();
+          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          setHistoryTranslation(text.trim());
+        } catch (e) {
+          console.error('Translation failed:', e);
+        } finally {
+          setTransLoading(false);
+        }
+      };
+      translateHistory();
+    } else {
+      setHistoryTranslation(null);
+    }
+  }, [selectedNode, apiKey, currentLang]);
 
   // Auto-scroll to current node
   useEffect(() => {
@@ -296,20 +332,20 @@ const ChroniclesView = () => {
                 <h3 className="text-2xl font-black font-chn">{sStage >= 1 ? sNode.name : 'Unknown Region'}</h3>
                 <p className="text-xs opacity-80 mt-1">{sNode.region} • {sStage === 3 ? '✅ Fully Revived' : sStage === 2 ? '⚡ Aura Full — Ready for Final Trial' : sStage === 1 ? `🌫️ Aura ${auraPercent}%` : '🔒 Unexplored'}</p>
               </div>
-              <div className="p-6">
+                <div className="p-6">
                 <p className="text-sm text-stone-600 font-chn leading-relaxed mb-4 text-center">{sNode.description}</p>
                 {(sStage === 1 || sStage === 2) && auraReq > 0 && (
                   <div className="mb-4">
-                    <div className="flex justify-between text-xs text-stone-400 mb-1"><span>Aura Progress</span><span>{sAura}/{auraReq}</span></div>
+                    <div className="flex justify-between text-xs text-stone-400 mb-1"><span>靈氣進度</span><span>{sAura}/{auraReq}</span></div>
                     <div className="h-3 bg-stone-100 rounded-full overflow-hidden border border-stone-200">
                       <div className={`h-full rounded-full transition-all duration-700 ${sStage === 2 ? 'bg-amber-500' : 'bg-emerald-400'}`} style={{width:`${auraPercent}%`}} />
                     </div>
-                    <p className="text-xs text-stone-400 mt-2 text-center">{sStage === 1 ? 'Keep learning to fill aura' : 'Aura full! Roll dice here for Final Trial'}</p>
+                    <p className="text-xs text-stone-400 mt-2 text-center">{sStage === 1 ? '在其他模式學習來累積靈氣' : '靈氣已滿！擲骰子到達此地開始終極試煉'}</p>
                   </div>
                 )}
                 {sStage === 2 && Object.keys(sNode.finalCost || {}).length > 0 && (
                   <div className="bg-amber-50 rounded-2xl p-4 border border-amber-200 mb-4">
-                    <h5 className="text-xs font-black text-amber-700 uppercase mb-3 text-center tracking-widest">Essence Required</h5>
+                    <h5 className="text-xs font-black text-amber-700 uppercase mb-3 text-center tracking-widest">試煉所需精華</h5>
                     <div className="flex justify-around">
                       {Object.entries(sNode.finalCost).map(([type, amt]) => (
                         <div key={type} className="flex flex-col items-center">
@@ -323,11 +359,47 @@ const ChroniclesView = () => {
                 {sStage === 3 && (
                   <div className="flex flex-col gap-3">
                     <div className="bg-emerald-50 p-3 rounded-2xl border border-emerald-100 text-center">
-                      <span className="text-emerald-700 font-bold text-sm">✅ Fully Revived</span>
+                      <span className="text-emerald-700 font-bold text-sm">✅ 完全復興</span>
                     </div>
+
+                    {/* 📜 歷史沿革區塊 */}
+                    {sNode.history && (
+                      <div className="bg-[#fdf6e3] p-4 rounded-2xl border border-[#eee8d5] shadow-inner relative overflow-hidden flex flex-col gap-3">
+                        <div className="absolute -right-2 -bottom-2 opacity-10 text-4xl">📜</div>
+                        
+                        <div>
+                          <h5 className="text-[10px] font-black text-[#8b7355] uppercase mb-1.5 flex items-center gap-1 tracking-widest">
+                            <span className="w-1 h-1 bg-[#8b7355] rounded-full"></span>
+                            中文介紹
+                          </h5>
+                          <p className="text-xs text-[#5d4037] font-chn leading-relaxed">
+                            {sNode.history}
+                          </p>
+                        </div>
+
+                        <div className="border-t border-[#8b7355]/10 pt-3">
+                          <h5 className="text-[10px] font-black text-emerald-600 uppercase mb-1.5 flex items-center gap-1 tracking-widest">
+                            <span className="w-1 h-1 bg-emerald-500 rounded-full"></span>
+                            {currentLang?.label || 'Foreign Language'}
+                          </h5>
+                          {transLoading ? (
+                            <div className="flex gap-1 py-1">
+                              <div className="w-1 h-1 bg-emerald-400 rounded-full animate-bounce"></div>
+                              <div className="w-1 h-1 bg-emerald-400 rounded-full animate-bounce [animation-delay:0.2s]"></div>
+                              <div className="w-1 h-1 bg-emerald-400 rounded-full animate-bounce [animation-delay:0.4s]"></div>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-stone-600 leading-relaxed font-medium">
+                              {historyTranslation || 'Translation unavailable.'}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     {unlockedPlants.length > 0 && (
                       <div className="border-t pt-3">
-                        <h5 className="text-xs font-black text-stone-400 uppercase mb-3 tracking-widest">Guardian Spirit</h5>
+                        <h5 className="text-xs font-black text-stone-400 uppercase mb-3 tracking-widest">守護靈派駐</h5>
                         <div className="flex overflow-x-auto gap-3 pb-2 no-scrollbar">
                           {unlockedPlants.map(pName => {
                             const pData = NATIVE_PLANT_DB.find(p => p.name === pName);
@@ -347,10 +419,10 @@ const ChroniclesView = () => {
                 )}
                 {sStage === 0 && (
                   <div className="bg-stone-50 rounded-2xl p-4 text-center border border-stone-100">
-                    <p className="text-stone-400 text-sm">Roll dice to reach this location and begin awakening</p>
+                    <p className="text-stone-400 text-sm">擲骰子到達此地開始喚醒過程</p>
                   </div>
                 )}
-                <button onClick={() => setSelectedNode(null)} className="w-full mt-4 py-3 text-stone-400 font-bold text-sm">Close</button>
+                <button onClick={() => setSelectedNode(null)} className="w-full mt-4 py-3 text-stone-400 font-bold text-sm">關閉視窗</button>
               </div>
             </div>
           </div>
