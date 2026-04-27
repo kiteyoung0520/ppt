@@ -319,64 +319,90 @@ const ChroniclesView = () => {
 
       {/* ── Modals ── */}
       
-      {/* Node Details Modal */}
-      {selectedNode !== null && (
-        <div className="absolute inset-0 z-40 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 animate-fadeIn">
-          <div className="bg-white rounded-[2.5rem] w-full max-w-sm overflow-hidden shadow-2xl animate-popup-fade">
-            <div className="bg-[#8b7355] p-6 text-white text-center">
-              <div className="text-5xl mb-2">{FORMOSA_MAP_NODES[selectedNode].emoji}</div>
-              <h3 className="text-2xl font-black font-chn">{FORMOSA_MAP_NODES[selectedNode].name}</h3>
-              <p className="text-xs opacity-80 mt-1">{FORMOSA_MAP_NODES[selectedNode].region}</p>
-            </div>
-            
-            <div className="p-6">
-              <p className="text-sm text-stone-600 font-chn leading-relaxed mb-6 text-center">
-                {FORMOSA_MAP_NODES[selectedNode].description}
-              </p>
+      {selectedNode !== null && FORMOSA_MAP_NODES[selectedNode] && (() => {
+        const selNode = FORMOSA_MAP_NODES[selectedNode];
+        const selStage = getStage(selectedNode);
+        const selAura = getAura(selectedNode);
+        const auraRequired = selNode.auraRequired || 0;
+        const auraPercent = auraRequired > 0 ? Math.round((selAura / auraRequired) * 100) : 100;
 
-              {!expedition.revivedNodes.includes(selectedNode) ? (
-                <div className="bg-stone-50 rounded-2xl p-4 border border-stone-100">
-                  <h5 className="text-xs font-black text-stone-400 uppercase mb-3 text-center tracking-widest">復興所需精華</h5>
-                  <div className="flex justify-around mb-6">
-                    {Object.entries(FORMOSA_MAP_NODES[selectedNode].cost || {}).map(([type, amt]) => (
-                      <div key={type} className="flex flex-col items-center">
-                        <span className="text-xl">{type === 'light' ? '☀️' : type === 'rain' ? '💧' : '🌱'}</span>
-                        <span className={`text-sm font-black ${essence[type] >= amt ? 'text-emerald-600' : 'text-red-400'}`}>
-                          {essence[type]} / {amt}
-                        </span>
+        return (
+          <div className="absolute inset-0 z-40 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 animate-fadeIn">
+            <div className="bg-white rounded-[2.5rem] w-full max-w-sm overflow-hidden shadow-2xl animate-popup-fade">
+              {/* 標頭 */}
+              <div className={`p-6 text-white text-center ${selStage === 3 ? 'bg-[#8b7355]' : selStage === 2 ? 'bg-amber-600' : 'bg-stone-500'}`}>
+                <div className="text-5xl mb-2">{selStage >= 1 ? selNode.emoji : '☁️'}</div>
+                <h3 className="text-2xl font-black font-chn">{selStage >= 1 ? selNode.name : '未知領域'}</h3>
+                <p className="text-xs opacity-80 mt-1">{selNode.region} • {
+                  selStage === 3 ? '✅ 完全復興' :
+                  selStage === 2 ? '⚡ 靈氣充滿，準備終極試煉' :
+                  selStage === 1 ? `🌫️ 靈氣累積中 ${auraPercent}%` : '🔒 尚未探索'
+                }</p>
+              </div>
+
+              <div className="p-6">
+                <p className="text-sm text-stone-600 font-chn leading-relaxed mb-4 text-center">
+                  {selNode.description}
+                </p>
+
+                {/* 靈氣進度條 (stage 1 & 2) */}
+                {(selStage === 1 || selStage === 2) && auraRequired > 0 && (
+                  <div className="mb-4">
+                    <div className="flex justify-between text-xs text-stone-400 mb-1">
+                      <span>靈氣進度</span>
+                      <span>{selAura} / {auraRequired}</span>
+                    </div>
+                    <div className="h-3 bg-stone-100 rounded-full overflow-hidden border border-stone-200">
+                      <div className={`h-full rounded-full transition-all duration-700 ${selStage === 2 ? 'bg-amber-500' : 'bg-emerald-400'}`}
+                        style={{ width: `${auraPercent}%` }} />
+                    </div>
+                    <p className="text-xs text-stone-400 mt-2 text-center font-chn">
+                      {selStage === 1 ? '繼續在其他模式學習以累積靈氣' : '靈氣已充滿！擲骰子到達此地開始終極試煉'}
+                    </p>
+                  </div>
+                )}
+
+                {/* 精華成本 (stage 2 顯示終極試煉資訊) */}
+                {selStage === 2 && Object.keys(selNode.finalCost || {}).length > 0 && (
+                  <div className="bg-amber-50 rounded-2xl p-4 border border-amber-200 mb-4">
+                    <h5 className="text-xs font-black text-amber-700 uppercase mb-3 text-center tracking-widest">終極試煉所需精華</h5>
+                    <div className="flex justify-around">
+                      {Object.entries(selNode.finalCost).map(([type, amt]) => (
+                        <div key={type} className="flex flex-col items-center">
+                          <span className="text-xl">{type === 'light' ? '☀️' : type === 'rain' ? '💧' : '🌱'}</span>
+                          <span className={`text-sm font-black ${(essence[type] || 0) >= amt ? 'text-emerald-600' : 'text-red-400'}`}>
+                            {essence[type] || 0} / {amt}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 已復興：植樹區 */}
+                {selStage === 3 && (
+                  <div className="flex flex-col gap-4">
+                    <div className="bg-emerald-50 p-3 rounded-2xl border border-emerald-100 text-center">
+                      <span className="text-emerald-700 font-bold text-sm">✅ 此地已完全復興</span>
+                    </div>
+                    {unlockedPlants.length > 0 && (
+                      <div className="border-t pt-4">
+                        <h5 className="text-xs font-black text-stone-400 uppercase mb-3 tracking-widest">守護靈派駐</h5>
+                        <div className="flex overflow-x-auto gap-3 pb-2 no-scrollbar">
+                          {unlockedPlants.map(pName => {
+                            const pData = NATIVE_PLANT_DB.find(p => p.name === pName);
+                            const isPlanted = expedition.plantedTrees?.[selectedNode] === pName || expedition.plantedTrees?.[String(selectedNode)] === pName;
+                            return (
+                              <button key={pName} onClick={() => handlePlant(selectedNode, pName)}
+                                className={`shrink-0 w-16 h-16 rounded-2xl flex flex-col items-center justify-center border-2 transition-all p-1
+                                  ${isPlanted ? 'bg-emerald-100 border-emerald-500' : 'bg-stone-50 border-stone-200 hover:border-emerald-300'}`}>
+                                <span className="text-2xl">{pData?.emoji}</span>
+                                <span className="text-[8px] text-stone-400 font-bold leading-tight text-center">{pName.slice(0,3)}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                  <button
-                    onClick={() => handleRevive(selectedNode)}
-                    className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl shadow-xl transition active:scale-95"
-                  >
-                    ✨ 啟動復興儀式
-                  </button>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-4">
-                  <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 text-center">
-                    <span className="text-emerald-700 font-bold text-sm">✅ 此地已成功復興</span>
-                  </div>
-                  
-                  {/* Planting Section */}
-                  <div className="border-t pt-4">
-                    <h5 className="text-xs font-black text-stone-400 uppercase mb-3 tracking-widest">守護靈派駐</h5>
-                    <div className="flex overflow-x-auto gap-3 pb-2 no-scrollbar">
-                      {unlockedPlants.map(pName => {
-                        const pData = NATIVE_PLANT_DB.find(p => p.name === pName);
-                        const isPlanted = expedition.plantedTrees[selectedNode] === pName;
-                        return (
-                          <button
-                            key={pName}
-                            onClick={() => handlePlant(selectedNode, pName)}
-                            className={`shrink-0 w-16 h-16 rounded-2xl flex items-center justify-center text-2xl border-2 transition-all
-                              ${isPlanted ? 'bg-emerald-100 border-emerald-500' : 'bg-stone-50 border-stone-200 hover:border-emerald-300'}
-                            `}
-                          >
-                            {pData?.emoji}
-                          </button>
                         );
                       })}
                     </div>
