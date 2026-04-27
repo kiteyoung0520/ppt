@@ -45,56 +45,60 @@ const ChroniclesView = () => {
 
   // 🤖 翻譯歷史沿革
   useEffect(() => {
-    // 只有在選中 Stage 3 節點且有歷史內容時才執行
     if (selectedNode !== null && getStage(selectedNode) === 3 && FORMOSA_MAP_NODES[selectedNode]?.history) {
       const node = FORMOSA_MAP_NODES[selectedNode];
       
       const translateHistory = async () => {
-        // 如果還在加載或是沒有 Key，先顯示提示
-        if (!apiKey) {
-          setHistoryTranslation("請在設定中填寫您的 Gemini API Key 以開啟雙語對照。");
+        // 清理 Key，避免空格導致失敗
+        const cleanKey = (apiKey || "").trim();
+        
+        if (!cleanKey || cleanKey.length < 10) {
+          setHistoryTranslation("請先在『個人設定』中填寫有效的 Gemini API Key。");
           return;
         }
 
         setTransLoading(true);
-        setHistoryTranslation("📜 翻譯加載中..."); // 讓使用者知道正在處理
+        setHistoryTranslation("📜 正在連線至靈力導譯系統...");
 
         try {
           const langName = currentLang?.name || 'English';
-          const prompt = `You are a professional historian and translator. 
-          Translate the following Traditional Chinese text about "${node.name}" into ${langName}. 
-          Keep the cultural nuances intact. Return ONLY the translated text without any prefixes or explanations.
-
+          const prompt = `You are an expert translator. Translate this Traditional Chinese historical text about "${node.name}" into ${langName}. 
+          Provide only the plain translation text. No conversational filler.
+          
           TEXT: ${node.history}`;
           
-          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+          // 使用 1.5-flash 通常更穩定且速度更快
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${cleanKey}`;
+          
+          const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
           });
           
-          const result = await response.json();
-          
-          if (result.error) {
-            throw new Error(result.error.message || 'API Error');
+          if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            const msg = errData?.error?.message || `HTTP ${response.status}`;
+            throw new Error(msg);
           }
 
+          const result = await response.json();
           const translatedText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+          
           if (translatedText) {
             setHistoryTranslation(translatedText.trim());
           } else {
-            setHistoryTranslation("翻譯生成失敗，請稍後再試。");
+            setHistoryTranslation("翻譯靈力不足，請檢查 API Key 額度。");
           }
         } catch (error) {
           console.error('History translation error:', error);
-          setHistoryTranslation("暫時無法連線至翻譯服務，請檢查網路。");
+          setHistoryTranslation(`連線失敗: ${error.message}。請確認網路環境或 API Key 是否正確。`);
         } finally {
           setTransLoading(false);
         }
       };
 
-      // 稍微延遲執行，確保 API Key 已準備就緒
-      const timer = setTimeout(translateHistory, 300);
+      const timer = setTimeout(translateHistory, 400);
       return () => clearTimeout(timer);
     } else {
       setHistoryTranslation(null);
