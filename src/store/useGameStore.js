@@ -62,18 +62,19 @@ export const NATIVE_PLANT_DB = [
   }
 ];
 
-// 🌿 福爾摩沙遠征地圖節點定義 (大富翁棋盤)
+// 🌿 福爾摩沙遠征地圖節點定義 (三階段大富翁棋盤)
+// stage: 0=未知 1=知識喚醒(輪廓) 2=靈氣灌注中 3=完全復興
 export const FORMOSA_MAP_NODES = [
-  { id: 0, name: "起點：台北", region: "北部", type: "start", emoji: "🏛️", description: "語林冒險的起點，這裡充滿了尋語者的氣息。" },
-  { id: 1, name: "陽明山", region: "北部", type: "chance", emoji: "♨️", description: "硫磺與迷霧交織，或許會遇到神祕的靈力事件？" },
-  { id: 2, name: "九份山城", region: "北部", type: "revival", emoji: "🏮", cost: { light: 100 }, description: "昔日的黃金之城，等待尋語者重新點亮紅燈籠。" },
-  { id: 3, name: "竹科綠廊", region: "北部", type: "fate", emoji: "🧪", description: "科技與自然的交匯，這裡的能量波動很不穩定。" },
-  { id: 4, name: "阿里山", region: "中部", type: "revival", emoji: "🚂", cost: { soil: 200 }, description: "神木守護的森林，需要深厚的土地精華才能喚醒。" },
-  { id: 5, name: "日月潭", region: "中部", type: "revival", emoji: "🛶", cost: { rain: 200 }, description: "湖光山色，這裡是雨露精華最純淨的地方。" },
-  { id: 6, name: "安平古堡", region: "南部", type: "revival", emoji: "🏰", cost: { light: 150, soil: 150 }, description: "歷史的基石，唯有智慧能重現古都的光輝。" },
-  { id: 7, name: "墾丁南灣", region: "南部", type: "revival", emoji: "🏝️", cost: { rain: 300 }, description: "熱情的陽光與海洋，需要大量雨露來維持生態平衡。" },
-  { id: 8, name: "太魯閣峽谷", region: "東部", type: "revival", emoji: "⛰️", cost: { light: 300, rain: 200 }, description: "大理石般的意志，唯有最強大的精華能復興此地。" },
-  { id: 9, name: "台東三仙台", region: "東部", type: "final", emoji: "🌉", cost: { light: 500, rain: 500, soil: 500 }, description: "傳說中仙人留下的足跡，語林之境的終極復興目標。" }
+  { id: 0, name: "起點：台北", region: "北部", type: "start", emoji: "🏛️", auraRequired: 0, finalCost: {}, description: "語林冒險的起點，這裡充滿了尋語者的氣息。" },
+  { id: 1, name: "陽明山", region: "北部", type: "chance", emoji: "♨️", auraRequired: 0, finalCost: {}, description: "硫磺與迷霧交織，或許會遇到神祕的靈力事件？" },
+  { id: 2, name: "九份山城", region: "北部", type: "revival", emoji: "🏮", auraRequired: 20, finalCost: { light: 100 }, description: "昔日的黃金之城，等待尋語者重新點亮紅燈籠。" },
+  { id: 3, name: "竹科綠廊", region: "北部", type: "fate", emoji: "🧪", auraRequired: 0, finalCost: {}, description: "科技與自然的交匯，這裡的能量波動很不穩定。" },
+  { id: 4, name: "阿里山", region: "中部", type: "revival", emoji: "🚂", auraRequired: 35, finalCost: { soil: 200 }, description: "神木守護的森林，需要深厚的土地精華才能喚醒。" },
+  { id: 5, name: "日月潭", region: "中部", type: "revival", emoji: "🛶", auraRequired: 35, finalCost: { rain: 200 }, description: "湖光山色，這裡是雨露精華最純淨的地方。" },
+  { id: 6, name: "安平古堡", region: "南部", type: "revival", emoji: "🏰", auraRequired: 50, finalCost: { light: 150, soil: 150 }, description: "歷史的基石，唯有智慧能重現古都的光輝。" },
+  { id: 7, name: "墾丁南灣", region: "南部", type: "revival", emoji: "🏝️", auraRequired: 50, finalCost: { rain: 300 }, description: "熱情的陽光與海洋，需要大量雨露來維持生態平衡。" },
+  { id: 8, name: "太魯閣峽谷", region: "東部", type: "revival", emoji: "⛰️", auraRequired: 70, finalCost: { light: 300, rain: 200 }, description: "大理石般的意志，唯有最強大的精華能復興此地。" },
+  { id: 9, name: "台東三仙台", region: "東部", type: "final", emoji: "🌉", auraRequired: 100, finalCost: { light: 500, rain: 500, soil: 500 }, description: "傳說中仙人留下的足跡，語林之境的終極復興目標。" }
 ];
 
 export const useGameStore = create(
@@ -93,12 +94,13 @@ export const useGameStore = create(
           rain: 0,   // From Translator/EchoValley
           soil: 0    // From VocabBook
         },
-        // 🌿 遠征進度數據
+        // 🌿 遠征進度數據（三階段）
         expedition: {
-          currentNode: 0,      // 目前所在的節點 ID
-          diceRemaining: 5,    // 剩餘骰子數
-          revivedNodes: [0],   // 已復興的據點 ID 列表
-          plantedTrees: {}     // 植樹記錄 { nodeIndex: plantName }
+          currentNode: 0,
+          diceRemaining: 5,
+          // nodeProgress: { [nodeIdx]: { stage: 0|1|2|3, aura: number } }
+          nodeProgress: { 0: { stage: 3, aura: 0 } }, // 起點預設完全復興
+          plantedTrees: {}
         }
       },
       streak: 0,
@@ -184,14 +186,27 @@ export const useGameStore = create(
       // --- Actions: Migration ---
       migrateLegacyData: () => {
         const { stats } = get();
-        const needsUpdate = !stats.essence || !stats.expedition;
-        if (needsUpdate) {
-          console.log("Store: Self-healing missing fields (essence/expedition)...");
+        const exp = stats.expedition;
+        const needsMigration = !stats.essence || !exp || exp.revivedNodes;
+        if (needsMigration) {
+          console.log("Store: Migrating to Tri-Stage expedition format...");
+          let nodeProgress = { 0: { stage: 3, aura: 0 } };
+          if (exp?.revivedNodes) {
+            // 舊格式轉換：revivedNodes → nodeProgress stage 3
+            exp.revivedNodes.forEach(idx => { nodeProgress[idx] = { stage: 3, aura: 0 }; });
+          } else if (exp?.nodeProgress) {
+            nodeProgress = exp.nodeProgress;
+          }
           set({
             stats: {
               ...stats,
               essence: stats.essence || { light: 0, rain: 0, soil: 0 },
-              expedition: stats.expedition || { currentNode: 0, diceRemaining: 5, revivedNodes: [0], plantedTrees: {} },
+              expedition: {
+                currentNode: exp?.currentNode || 0,
+                diceRemaining: exp?.diceRemaining ?? 5,
+                nodeProgress,
+                plantedTrees: exp?.plantedTrees || {}
+              },
               unlockedPlants: Array.isArray(stats.unlockedPlants) ? stats.unlockedPlants : []
             }
           });
@@ -305,8 +320,9 @@ export const useGameStore = create(
         };
 
         set({ savedWords: [newWord, ...savedWords] });
-        addEssence('soil', 5); // Learning new word adds soil essence
-        get().earnDice(1); // 🌿 收藏單字獲得 1 顆骰子
+        addEssence('soil', 5);
+        get().earnDice(1);
+        get().addGlobalAura(5); // 🌿 收藏單字 → 靈氣 +5
         recordActivity();
       },
 
@@ -329,7 +345,10 @@ export const useGameStore = create(
           };
         });
         set({ savedWords: updated });
-        if (remembered) get().earnDice(1); // 🌿 複習成功獲得 1 顆骰子
+        if (remembered) {
+          get().earnDice(1);
+          get().addGlobalAura(10); // 🌿 複習成功 → 靈氣 +10
+        }
       },
 
       removeWord: (word, langKey) => {
@@ -358,8 +377,9 @@ export const useGameStore = create(
           if (res.status === 'success') {
             const newArt = { ...article, id: res.data.id, date: new Date() };
             set({ savedArticles: [newArt, ...savedArticles] });
-            get().earnDice(2); // 🌿 儲存文章獲得 2 顆骰子
-            toast("✨ 文章已成功加入轉錄庫！獲得 2 顆骰子 🎲");
+            get().earnDice(2);
+            get().addGlobalAura(20); // 🌿 學習文章 → 靈氣 +20
+            toast("✨ 文章已加入轉錄庫！獲得 2 顆骰子 🎲");
           }
         } catch (e) {
           console.error("Store: Failed to save article:", e);
@@ -414,55 +434,69 @@ export const useGameStore = create(
         }));
       },
 
-      reviveNode: (nodeIdx) => {
+      // 三階段復興系統
+      // Stage 1：踩到格位並完成首次 AI 測驗 (3 題 2/3)
+      completeStage1: (nodeIdx) => {
+        set((state) => {
+          const np = { ...state.stats.expedition.nodeProgress };
+          np[nodeIdx] = { stage: 1, aura: 0 };
+          return { stats: { ...state.stats, expedition: { ...state.stats.expedition, nodeProgress: np } } };
+        });
+      },
+
+      // Stage 2：學習行為累積靈氣（自動，由學習模組呼叫）
+      addGlobalAura: (amount) => {
+        set((state) => {
+          const np = { ...state.stats.expedition.nodeProgress };
+          let changed = false;
+          FORMOSA_MAP_NODES.forEach((node, idx) => {
+            const p = np[idx];
+            if (!p || p.stage !== 1) return;
+            const newAura = Math.min((p.aura || 0) + amount, node.auraRequired);
+            const newStage = newAura >= node.auraRequired ? 2 : 1;
+            if (newAura !== p.aura || newStage !== p.stage) {
+              np[idx] = { stage: newStage, aura: newAura };
+              changed = true;
+            }
+          });
+          if (!changed) return state;
+          return { stats: { ...state.stats, expedition: { ...state.stats.expedition, nodeProgress: np } } };
+        });
+      },
+
+      // Stage 3：消耗精華 + 完成終極試煉後呼叫
+      completeStage3: (nodeIdx) => {
         const node = FORMOSA_MAP_NODES[nodeIdx];
-        if (!node || node.type !== 'revival' && node.type !== 'final') return false;
-        
+        if (!node) return false;
         const { stats } = get();
-        const cost = node.cost || {};
-        
-        // Check if has enough essence
+        const cost = node.finalCost || {};
         for (const [type, amount] of Object.entries(cost)) {
           if ((stats.essence[type] || 0) < amount) return false;
         }
-
-        // Deduct and add to revived list
         set((state) => {
           const newEssence = { ...state.stats.essence };
-          for (const [type, amount] of Object.entries(cost)) {
-            newEssence[type] -= amount;
-          }
-
+          for (const [type, amount] of Object.entries(cost)) newEssence[type] -= amount;
+          const np = { ...state.stats.expedition.nodeProgress };
+          np[nodeIdx] = { stage: 3, aura: node.auraRequired };
           return {
-            stats: {
-              ...state.stats,
-              essence: newEssence,
-              expedition: {
-                ...state.stats.expedition,
-                revivedNodes: [...new Set([...state.stats.expedition.revivedNodes, nodeIdx])]
-              }
-            }
+            stats: { ...state.stats, essence: newEssence,
+              expedition: { ...state.stats.expedition, nodeProgress: np } }
           };
         });
         return true;
       },
 
+      // 保留舊名稱供向後相容
+      reviveNode: (nodeIdx) => get().completeStage3(nodeIdx),
+
       plantTreeInNode: (nodeIdx, plantName) => {
         const { stats } = get();
-        if (!stats.expedition.revivedNodes.includes(nodeIdx)) return false;
-        if (!stats.unlockedPlants.includes(plantName)) return false;
-
+        const progress = stats.expedition.nodeProgress?.[nodeIdx];
+        if (!progress || progress.stage !== 3) return false;
         set((state) => ({
-          stats: {
-            ...state.stats,
-            expedition: {
-              ...state.stats.expedition,
-              plantedTrees: {
-                ...state.stats.expedition.plantedTrees,
-                [nodeIdx]: plantName
-              }
-            }
-          }
+          stats: { ...state.stats, expedition: { ...state.stats.expedition,
+            plantedTrees: { ...state.stats.expedition.plantedTrees, [nodeIdx]: plantName }
+          }}
         }));
         return true;
       },
@@ -471,7 +505,7 @@ export const useGameStore = create(
         stats: { 
           coins: 0, exp: 0, plantStage: 0, currentPlant: '黃花風鈴木', unlockedPlants: [], expiryDate: null, 
           essence: {light:0, rain:0, soil:0},
-          expedition: { currentNode: 0, diceRemaining: 5, revivedNodes: [0], plantedTrees: {} }
+          expedition: { currentNode: 0, diceRemaining: 5, nodeProgress: { 0: { stage: 3, aura: 0 } }, plantedTrees: {} }
         },
         streak: 0,
         lastStudyDate: null,

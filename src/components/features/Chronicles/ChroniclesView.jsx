@@ -5,16 +5,21 @@ import { useAuth } from '../../../context/AuthContext';
 import { toast } from '../../ui/Toast';
 
 const ChroniclesView = () => {
-  const { stats, rollDice, earnDice, reviveNode, plantTreeInNode, addEssence } = useGame();
+  const { stats, rollDice, earnDice, completeStage1, completeStage3, plantTreeInNode, addEssence } = useGame();
   const { apiKey } = useAuth();
 
-  // 🌿 防禦性預設值
-  const DEFAULT_EXPEDITION = { currentNode: 0, diceRemaining: 5, revivedNodes: [0], plantedTrees: {} };
+  const DEFAULT_EXPEDITION = { currentNode: 0, diceRemaining: 5, nodeProgress: { 0: { stage: 3, aura: 0 } }, plantedTrees: {} };
   const DEFAULT_ESSENCE = { light: 0, rain: 0, soil: 0 };
 
   const expedition = stats?.expedition || DEFAULT_EXPEDITION;
+  // 支援舊格式轉換：如果還是 revivedNodes，自動建構 nodeProgress
+  const nodeProgress = expedition.nodeProgress || 
+    (expedition.revivedNodes ? Object.fromEntries((expedition.revivedNodes).map(i => [i, { stage: 3, aura: 0 }])) : { 0: { stage: 3, aura: 0 } });
   const essence = stats?.essence || DEFAULT_ESSENCE;
   const unlockedPlants = Array.isArray(stats?.unlockedPlants) ? stats.unlockedPlants : [];
+
+  const getStage = (idx) => nodeProgress[idx]?.stage ?? 0;
+  const getAura = (idx) => nodeProgress[idx]?.aura ?? 0;
   
   const [isRolling, setIsRolling] = useState(false);
   const [lastRoll, setLastRoll] = useState(null);
@@ -52,24 +57,38 @@ const ChroniclesView = () => {
       setIsRolling(false);
       const newNodeIdx = (expedition.currentNode + roll) % FORMOSA_MAP_NODES.length;
       const landedNode = FORMOSA_MAP_NODES[newNodeIdx];
+      const landedStage = getStage(newNodeIdx);
       if (landedNode.type === 'chance' || landedNode.type === 'fate') {
         setTimeout(() => triggerRandomEvent(landedNode), 800);
-      } else if (landedNode.type === 'revival' || landedNode.type === 'final') {
-        setTimeout(() => startChallenge(landedNode), 800);
+      } else if ((landedNode.type === 'revival' || landedNode.type === 'final') && landedStage === 0) {
+        // 階段 1：首次踹到 → AI 测驗喚醒
+        setTimeout(() => startChallenge(landedNode, 'stage1'), 800);
+      } else if ((landedNode.type === 'revival' || landedNode.type === 'final') && landedStage === 2) {
+        // 階段 3：靈氣充滿 → 終極試煉
+        setTimeout(() => startChallenge(landedNode, 'stage3'), 800);
+      } else if ((landedNode.type === 'revival' || landedNode.type === 'final') && landedStage === 1) {
+        // 階段 2：靈氣累積中 → 提示進度
+        setTimeout(() => setSelectedNode(newNodeIdx), 800);
+      } else if (landedStage === 3) {
+        setTimeout(() => setSelectedNode(newNodeIdx), 800);
       }
     }, 800);
   };
 
-  // 🤖 AI 出題引擎
-  const startChallenge = async (node) => {
+  // 🤖 AI 出題引擎 (支援階段模式)
+  const startChallenge = async (node, mode = 'stage1') => {
     if (!apiKey) { toast('請先在設定中填入 Gemini API Key'); return; }
     setChallengeLoading(true);
-    setChallengeNode(node);
+    setChallengeNode({ ...node, mode });
     setChallengePassed(false);
     setScore({ correct: 0, total: 0, currentQ: 0 });
     setSelectedAnswer(null);
     setChallengeResult(null);
-    const prompt = `你是台灣語言學習遊戲的出題老師。請針對台灣景點「${node.name}」（位於${node.region}），出3道學習挑戰題。每題必須包含：與該地相關的外語詞彙或文化知識問題、4個選項（只能1個正確）、正確答案索引(0-3)、一句中文解釋。
+
+    const questionCount = mode === 'stage3' ? 5 : 3;
+    const difficulty = mode === 'stage3' ? '進階難度，包含詞彙运用、句子結構與文化知識' : '初中級，著重詞彙識別與基枬文化常識';
+    const prompt = `你是台灣語言學習遊戲的出題老師。請針對台灣景點「${node.name}」（位於${node.region}），出${questionCount}道${difficulty}的學習挑戰題。
+每題必須包含：與該地相關的外語詞彙或文化知識問題、4個選項（只能1個正確）、正確答案索引(0-3)、一句中文解釋。
 嚴格以此JSON格式回傳，不加其他文字：[{"q":"問題","opts":["A","B","C","D"],"ans":0,"exp":"解釋"}]`;
     try {
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
@@ -80,14 +99,13 @@ const ChroniclesView = () => {
       const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
       const jsonStr = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
       const parsed = JSON.parse(jsonStr);
-      // 🌿 驗證：確保解析結果是非空的題目陣列
       if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].q) {
         setChallenge(parsed);
       } else {
-        throw new Error('Empty or invalid question array');
+        throw new Error('Invalid questions');
       }
     } catch (e) {
-      console.warn('Challenge generation fell back to default:', e.message);
+      console.warn('Falling back to preset questions:', e.message);
       setChallenge(FALLBACK_QUESTIONS(node.name));
     } finally {
       setChallengeLoading(false);
@@ -107,10 +125,29 @@ const ChroniclesView = () => {
     const nextQ = score.currentQ + 1;
     if (nextQ >= challenge.length) {
       const finalCorrect = score.correct + (challengeResult === 'correct' ? 1 : 0);
-      const passed = finalCorrect >= 2;
+      const mode = challengeNode?.mode;
+      const passThreshold = mode === 'stage3' ? 4 : 2; // 終極試煉需 4/5，初階需 2/3
+      const passed = finalCorrect >= passThreshold;
       setChallengePassed(passed);
-      if (passed) { toast(`🏆 挑戰通過！${challengeNode?.name} 可以復興了！`); earnDice(2); }
-      else { toast('💪 答對 ' + finalCorrect + '/3，繼續努力！'); earnDice(1); }
+      const nodeIdx = FORMOSA_MAP_NODES.findIndex(n => n.name === challengeNode?.name);
+      if (passed) {
+        if (mode === 'stage1') {
+          completeStage1(nodeIdx);
+          toast(`✨ ${challengeNode?.name} 輪廓已喚醒！持續學習累積靈氣吧！`);
+          earnDice(1);
+        } else if (mode === 'stage3') {
+          const success = completeStage3(nodeIdx);
+          if (success) {
+            toast(`🏆 ${challengeNode?.name} 完全復興！可以種植守護植物了！`);
+            earnDice(3);
+          } else {
+            toast('❌ 精華不足，無法完成復興儀式！');
+          }
+        }
+      } else {
+        toast(`💪 答對 ${finalCorrect}/${challenge.length} 題，繼續努力！獲得 1 顆骰子`);
+        earnDice(1);
+      }
       setScore(s => ({ ...s, currentQ: -1, correct: finalCorrect }));
     } else {
       setScore(s => ({ ...s, currentQ: nextQ }));
@@ -185,8 +222,21 @@ const ChroniclesView = () => {
         <div className="flex flex-col gap-24 relative z-10">
           {FORMOSA_MAP_NODES.map((node, idx) => {
             const isCurrent = expedition.currentNode === idx;
-            const isRevived = expedition.revivedNodes.includes(idx);
-            const plantedTree = expedition.plantedTrees[idx];
+            const stage = getStage(idx);
+            const aura = getAura(idx);
+            const plantedTree = expedition.plantedTrees?.[idx] || expedition.plantedTrees?.[String(idx)];
+            const auraPercent = node.auraRequired > 0 ? Math.round((aura / node.auraRequired) * 100) : 0;
+
+            // 三階段視覺樣式
+            const circleStyle = stage === 3 ? 'bg-white border-[#8b7355]'
+              : stage === 2 ? 'bg-amber-50 border-amber-500 ring-4 ring-amber-400/30'
+              : stage === 1 ? 'bg-stone-100 border-stone-400 opacity-80'
+              : 'bg-stone-200 border-stone-300 grayscale opacity-50';
+
+            const stageEmoji = stage === 3 ? node.emoji
+              : stage === 2 ? '✨'
+              : stage === 1 ? '🌫️'
+              : '☁️';
 
             return (
               <div 
@@ -195,39 +245,44 @@ const ChroniclesView = () => {
                 className={`relative flex items-center ${idx % 2 === 0 ? 'flex-row' : 'flex-row-reverse'} transition-all duration-500`}
               >
                 {/* Node Circle */}
-                <button
-                  onClick={() => setSelectedNode(idx)}
-                  className={`
-                    w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center text-3xl shadow-xl border-4 transition-all
-                    ${isCurrent ? 'scale-125 border-emerald-500 bg-white ring-8 ring-emerald-500/20' : ''}
-                    ${isRevived ? 'bg-white border-[#8b7355]' : 'bg-stone-300 border-stone-400 grayscale'}
-                  `}
-                >
-                  {isRevived ? node.emoji : '☁️'}
-                  
-                  {/* Plant Icon overlay */}
-                  {plantedTree && (
-                    <div className="absolute -top-2 -right-2 bg-white rounded-full w-8 h-8 flex items-center justify-center text-sm shadow-md border border-emerald-500 animate-bounce">
-                      {NATIVE_PLANT_DB.find(p => p.name === plantedTree)?.emoji}
+                <div className="relative flex-shrink-0">
+                  <button
+                    onClick={() => setSelectedNode(idx)}
+                    className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center text-3xl shadow-xl border-4 transition-all ${circleStyle} ${isCurrent ? 'scale-125 border-emerald-500 bg-white ring-8 ring-emerald-500/20' : ''}`}
+                  >
+                    {stageEmoji}
+                  </button>
+                  {/* 植物守護圖示 */}
+                  {plantedTree && stage === 3 && (
+                    <div className="absolute -top-2 -right-2 bg-white rounded-full w-8 h-8 flex items-center justify-center text-sm shadow-md border-2 border-emerald-500">
+                      {NATIVE_PLANT_DB.find(p => p.name === plantedTree)?.emoji || '🌿'}
                     </div>
                   )}
-                </button>
+                </div>
 
-                {/* Node Label */}
-                <div className={`mx-4 ${idx % 2 === 0 ? 'text-left' : 'text-right'}`}>
-                  <h4 className={`font-black font-chn ${isRevived ? 'text-[#5d4037]' : 'text-stone-400'}`}>
-                    {isRevived ? node.name : '未知領域'}
+                {/* Node Label + Aura Bar */}
+                <div className={`mx-4 flex-1 min-w-0 ${idx % 2 === 0 ? 'text-left' : 'text-right'}`}>
+                  <h4 className={`font-black font-chn text-sm ${stage >= 1 ? 'text-[#5d4037]' : 'text-stone-300'}`}>
+                    {stage >= 1 ? node.name : '未知領域'}
                   </h4>
-                  <p className="text-[10px] text-stone-500 font-bold uppercase tracking-tighter">
-                    {node.region} • {node.type}
+                  <p className="text-[10px] text-stone-400 font-bold uppercase tracking-tighter mb-1">
+                    {stage === 3 ? '✅ 已復興' : stage === 2 ? '⚡ 靈氣充滿' : stage === 1 ? `🌫️ 靈氣 ${auraPercent}%` : '🔒 未探索'}
                   </p>
+                  {/* 靈氣進度條 (stage 1 & 2) */}
+                  {(stage === 1 || stage === 2) && node.auraRequired > 0 && (
+                    <div className={`h-1.5 rounded-full overflow-hidden ${idx % 2 === 0 ? '' : 'ml-auto'} w-20`}
+                      style={{ background: '#e5e7eb' }}>
+                      <div 
+                        className={`h-full rounded-full transition-all duration-500 ${stage === 2 ? 'bg-amber-500' : 'bg-emerald-400'}`}
+                        style={{ width: `${auraPercent}%` }}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Current Indicator */}
                 {isCurrent && (
-                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-2xl animate-bounce">
-                    📍
-                  </div>
+                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-2xl animate-bounce">📍</div>
                 )}
               </div>
             );
