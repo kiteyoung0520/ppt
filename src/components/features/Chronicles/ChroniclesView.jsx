@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useGame, NATIVE_PLANT_DB } from '../../../context/GameContext';
 import { FORMOSA_MAP_NODES } from '../../../store/useGameStore';
+import { useAuth } from '../../../context/AuthContext';
 import { toast } from '../../ui/Toast';
 
 const ChroniclesView = () => {
   const { stats, rollDice, earnDice, reviveNode, plantTreeInNode, addEssence } = useGame();
+  const { apiKey } = useAuth();
 
-  // 🌿 防禦性預設值：防止 localStorage 舊資料缺少欄位時崩潰
+  // 🌿 防禦性預設值
   const DEFAULT_EXPEDITION = { currentNode: 0, diceRemaining: 5, revivedNodes: [0], plantedTrees: {} };
   const DEFAULT_ESSENCE = { light: 0, rain: 0, soil: 0 };
 
@@ -17,7 +19,16 @@ const ChroniclesView = () => {
   const [isRolling, setIsRolling] = useState(false);
   const [lastRoll, setLastRoll] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
-  const [showEvent, setShowEvent] = useState(null); // { type, title, content, effect }
+  const [showEvent, setShowEvent] = useState(null);
+
+  // 🎯 挑戰系統狀態
+  const [challenge, setChallenge] = useState(null);
+  const [challengeLoading, setChallengeLoading] = useState(false);
+  const [selectedAnswer, setSelectedAnswer] = useState(null);
+  const [challengeResult, setChallengeResult] = useState(null);
+  const [score, setScore] = useState({ correct: 0, total: 0, currentQ: 0 });
+  const [challengeNode, setChallengeNode] = useState(null);
+  const [challengePassed, setChallengePassed] = useState(false);
 
   const scrollRef = useRef(null);
 
@@ -33,22 +44,82 @@ const ChroniclesView = () => {
 
   const handleRoll = () => {
     if (expedition.diceRemaining <= 0 || isRolling) return;
-    
     setIsRolling(true);
     setLastRoll(null);
-    
-    // Dice Animation delay
     setTimeout(() => {
       const roll = rollDice();
       setLastRoll(roll);
       setIsRolling(false);
-      
-      // Trigger Random Event if landing on Chance/Fate
-      const landedNode = FORMOSA_MAP_NODES[(expedition.currentNode + roll) % FORMOSA_MAP_NODES.length];
+      const newNodeIdx = (expedition.currentNode + roll) % FORMOSA_MAP_NODES.length;
+      const landedNode = FORMOSA_MAP_NODES[newNodeIdx];
       if (landedNode.type === 'chance' || landedNode.type === 'fate') {
-        setTimeout(() => triggerRandomEvent(landedNode), 1000);
+        setTimeout(() => triggerRandomEvent(landedNode), 800);
+      } else if (landedNode.type === 'revival' || landedNode.type === 'final') {
+        setTimeout(() => startChallenge(landedNode), 800);
       }
     }, 800);
+  };
+
+  // 🤖 AI 出題引擎
+  const startChallenge = async (node) => {
+    if (!apiKey) { toast('請先在設定中填入 Gemini API Key'); return; }
+    setChallengeLoading(true);
+    setChallengeNode(node);
+    setChallengePassed(false);
+    setScore({ correct: 0, total: 0, currentQ: 0 });
+    setSelectedAnswer(null);
+    setChallengeResult(null);
+    const prompt = `你是台灣語言學習遊戲的出題老師。請針對台灣景點「${node.name}」（位於${node.region}），出3道學習挑戰題。每題必須包含：與該地相關的外語詞彙或文化知識問題、4個選項（只能1個正確）、正確答案索引(0-3)、一句中文解釋。
+嚴格以此JSON格式回傳，不加其他文字：[{"q":"問題","opts":["A","B","C","D"],"ans":0,"exp":"解釋"}]`;
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+      });
+      const data = await res.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+      const jsonStr = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      setChallenge(JSON.parse(jsonStr));
+    } catch (e) {
+      setChallenge(FALLBACK_QUESTIONS(node.name));
+    } finally {
+      setChallengeLoading(false);
+    }
+  };
+
+  const handleAnswer = (optIdx) => {
+    if (selectedAnswer !== null) return;
+    setSelectedAnswer(optIdx);
+    const isCorrect = optIdx === challenge[score.currentQ].ans;
+    setChallengeResult(isCorrect ? 'correct' : 'wrong');
+    setScore(s => ({ ...s, correct: s.correct + (isCorrect ? 1 : 0), total: s.total + 1 }));
+    if (isCorrect) addEssence('light', 20);
+  };
+
+  const handleNextQuestion = () => {
+    const nextQ = score.currentQ + 1;
+    if (nextQ >= challenge.length) {
+      const finalCorrect = score.correct + (challengeResult === 'correct' ? 1 : 0);
+      const passed = finalCorrect >= 2;
+      setChallengePassed(passed);
+      if (passed) { toast(`🏆 挑戰通過！${challengeNode?.name} 可以復興了！`); earnDice(2); }
+      else { toast('💪 答對 ' + finalCorrect + '/3，繼續努力！'); earnDice(1); }
+      setScore(s => ({ ...s, currentQ: -1, correct: finalCorrect }));
+    } else {
+      setScore(s => ({ ...s, currentQ: nextQ }));
+      setSelectedAnswer(null);
+      setChallengeResult(null);
+    }
+  };
+
+  const closeChallenge = () => {
+    if (challengePassed) {
+      const nodeIdx = FORMOSA_MAP_NODES.findIndex(n => n.name === challengeNode?.name);
+      if (nodeIdx >= 0) setSelectedNode(nodeIdx);
+    }
+    setChallenge(null); setChallengeNode(null);
+    setSelectedAnswer(null); setChallengeResult(null);
+    setChallengePassed(false);
   };
 
   const triggerRandomEvent = (node) => {
@@ -293,6 +364,113 @@ const ChroniclesView = () => {
         </div>
       )}
 
+      {/* 🎯 AI 挑戰加載中 */}
+      {challengeLoading && (
+        <div className="absolute inset-0 z-50 bg-[#0f172a]/95 flex flex-col items-center justify-center gap-6 animate-fadeIn">
+          <div className="text-6xl animate-bounce">{challengeNode?.emoji}</div>
+          <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+          <div className="text-center">
+            <p className="text-white font-black text-lg">{challengeNode?.name}</p>
+            <p className="text-emerald-400 text-sm mt-1">守護者正在出題中...</p>
+          </div>
+        </div>
+      )}
+
+      {/* 🎯 AI 挑戰題目模態 */}
+      {challenge && !challengeLoading && (
+        <div className="absolute inset-0 z-50 bg-[#0f172a]/95 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-[2rem] w-full max-w-sm overflow-hidden shadow-2xl animate-popup-fade">
+            
+            {/* 標題列 */}
+            <div className="bg-gradient-to-r from-[#8b7355] to-[#5d4037] p-5 text-white">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-xs font-black uppercase tracking-widest opacity-70">守護者試煉</span>
+                <span className="text-xs font-bold bg-white/20 px-2 py-0.5 rounded-full">
+                  {score.currentQ >= 0 ? `${score.currentQ + 1} / ${challenge.length}` : '完成'}
+                </span>
+              </div>
+              <h3 className="text-lg font-black">{challengeNode?.emoji} {challengeNode?.name}</h3>
+              {/* 分數寬度條 */}
+              <div className="flex gap-1.5 mt-3">
+                {challenge.map((_, i) => (
+                  <div key={i} className={`flex-1 h-1.5 rounded-full transition-all ${
+                    i < score.currentQ ? 'bg-emerald-400' :
+                    i === score.currentQ && score.currentQ >= 0 ? 'bg-white' : 'bg-white/20'
+                  }`}/>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-5">
+              {score.currentQ >= 0 ? (
+                // 題目視圖
+                <>
+                  <p className="text-stone-800 font-bold text-base leading-relaxed mb-5 font-chn">
+                    {challenge[score.currentQ]?.q}
+                  </p>
+                  <div className="flex flex-col gap-2.5 mb-4">
+                    {challenge[score.currentQ]?.opts?.map((opt, i) => {
+                      let btnStyle = 'bg-stone-50 border-2 border-stone-200 text-stone-700 hover:border-emerald-400';
+                      if (selectedAnswer !== null) {
+                        if (i === challenge[score.currentQ].ans) btnStyle = 'bg-emerald-50 border-2 border-emerald-500 text-emerald-800 font-black';
+                        else if (i === selectedAnswer && i !== challenge[score.currentQ].ans) btnStyle = 'bg-red-50 border-2 border-red-400 text-red-700';
+                        else btnStyle = 'bg-stone-50 border-2 border-stone-100 text-stone-400 opacity-60';
+                      }
+                      return (
+                        <button key={i} onClick={() => handleAnswer(i)}
+                          className={`w-full text-left px-4 py-3 rounded-xl text-sm transition-all active:scale-98 ${btnStyle}`}>
+                          <span className="font-black mr-2 text-stone-400">{['A','B','C','D'][i]}.</span>
+                          {opt}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {selectedAnswer !== null && (
+                    <div className={`rounded-xl p-3 mb-4 text-sm font-chn ${
+                      challengeResult === 'correct' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-800 border border-red-200'
+                    }`}>
+                      <span className="font-black">{challengeResult === 'correct' ? '✅ 正確！' : '❌ 答錯了'}</span>
+                      <span className="ml-2">{challenge[score.currentQ]?.exp}</span>
+                    </div>
+                  )}
+                  {selectedAnswer !== null && (
+                    <button onClick={handleNextQuestion}
+                      className="w-full py-3.5 bg-[#5d4037] hover:bg-[#4e342e] text-white font-black rounded-xl transition active:scale-95 text-sm">
+                      {score.currentQ + 1 >= challenge.length ? '查看結果' : '下一題 →'}
+                    </button>
+                  )}
+                </>
+              ) : (
+                // 結果視圖
+                <div className="text-center py-4">
+                  <div className="text-6xl mb-4">{score.correct >= 2 ? '🏆' : '🌱'}</div>
+                  <h4 className="text-2xl font-black text-stone-800 mb-2">
+                    {score.correct >= 2 ? '挑戰通過！' : '繼續努力！'}
+                  </h4>
+                  <p className="text-stone-500 text-sm mb-6 font-chn">
+                    {score.correct >= 2
+                      ? `答對 ${score.correct}/3 題！${challengeNode?.name}等待您復興。獲得 2 顆骰子 🎲`
+                      : `答對 ${score.correct}/3 題，繼續學習就能通過！獲得 1 顆骰子 🎲`
+                    }
+                  </p>
+                  <div className="flex gap-2 justify-center mb-6">
+                    {Array.from({length: challenge.length}).map((_, i) => (
+                      <div key={i} className={`w-3 h-3 rounded-full ${i < score.correct ? 'bg-emerald-500' : 'bg-stone-200'}`}/>
+                    ))}
+                  </div>
+                  <button onClick={closeChallenge}
+                    className={`w-full py-4 text-white font-black rounded-xl transition active:scale-95 ${
+                      score.correct >= 2 ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-[#8b7355] hover:bg-[#6d5a43]'
+                    }`}>
+                    {score.correct >= 2 ? '前往復興 →' : '關閉視窗'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
@@ -307,6 +485,12 @@ const FATE_EVENTS = [
   { type: 'fate', title: '迷失之霧', content: '一場濃霧遮住了路標，你被迫多繞了一些路，但也發現了肥沃的土壤。', effect: { essence: { soil: 30 } } },
   { type: 'fate', title: '古道的考驗', content: '路徑變得崎嶇不平，你需要消耗更多體力前進，但也磨練了意志。', effect: { dice: 1 } },
   { type: 'fate', title: '守護者的共鳴', content: '你聽到了大地的低語，體內的各種精華開始產生共鳴。', effect: { essence: { light: 20, rain: 20, soil: 20 } } }
+];
+
+const FALLBACK_QUESTIONS = (locationName) => [
+  { q: `「${locationName}」所在的台灣，英文名稱是什麼？`, opts: ['Taiwan', 'Thailand', 'Tahiti', 'Tainan'], ans: 0, exp: 'Taiwan 是台灣最通用的英文名稱，源自葡萄牙語 Formosa。' },
+  { q: `在台灣景點旅遊時，「入口」的英文是哪個？`, opts: ['Exit', 'Entrance', 'Restroom', 'Parking'], ans: 1, exp: 'Entrance 是入口，Exit 是出口，兩者常見於各大景點指示牌。' },
+  { q: `台灣被葡萄牙人譽為哪個美麗的稱號？`, opts: ['Pearl of Asia', 'Beautiful Island', 'Isle of Gold', 'Jade Island'], ans: 1, exp: '葡萄牙語 Ilha Formosa 意為 Beautiful Island（美麗之島），這也是台灣的古名 Formosa 的由來。' }
 ];
 
 export default ChroniclesView;
