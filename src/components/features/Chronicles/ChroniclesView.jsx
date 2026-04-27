@@ -5,21 +5,16 @@ import { useAuth } from '../../../context/AuthContext';
 import { toast } from '../../ui/Toast';
 
 const ChroniclesView = () => {
-  const { stats, rollDice, earnDice, completeStage1, completeStage3, plantTreeInNode, addEssence } = useGame();
+  const { stats, rollDice, earnDice, reviveNode, plantTreeInNode, addEssence } = useGame();
   const { apiKey } = useAuth();
 
-  const DEFAULT_EXPEDITION = { currentNode: 0, diceRemaining: 5, nodeProgress: { 0: { stage: 3, aura: 0 } }, plantedTrees: {} };
+  // 🌿 防禦性預設值
+  const DEFAULT_EXPEDITION = { currentNode: 0, diceRemaining: 5, revivedNodes: [0], plantedTrees: {} };
   const DEFAULT_ESSENCE = { light: 0, rain: 0, soil: 0 };
 
   const expedition = stats?.expedition || DEFAULT_EXPEDITION;
-  // 支援舊格式轉換：如果還是 revivedNodes，自動建構 nodeProgress
-  const nodeProgress = expedition.nodeProgress || 
-    (expedition.revivedNodes ? Object.fromEntries((expedition.revivedNodes).map(i => [i, { stage: 3, aura: 0 }])) : { 0: { stage: 3, aura: 0 } });
   const essence = stats?.essence || DEFAULT_ESSENCE;
   const unlockedPlants = Array.isArray(stats?.unlockedPlants) ? stats.unlockedPlants : [];
-
-  const getStage = (idx) => nodeProgress[idx]?.stage ?? 0;
-  const getAura = (idx) => nodeProgress[idx]?.aura ?? 0;
   
   const [isRolling, setIsRolling] = useState(false);
   const [lastRoll, setLastRoll] = useState(null);
@@ -61,35 +56,25 @@ const ChroniclesView = () => {
       if (landedNode.type === 'chance' || landedNode.type === 'fate') {
         setTimeout(() => triggerRandomEvent(landedNode), 800);
       } else if ((landedNode.type === 'revival' || landedNode.type === 'final') && landedStage === 0) {
-        // 階段 1：首次踹到 → AI 测驗喚醒
         setTimeout(() => startChallenge(landedNode, 'stage1'), 800);
       } else if ((landedNode.type === 'revival' || landedNode.type === 'final') && landedStage === 2) {
-        // 階段 3：靈氣充滿 → 終極試煉
         setTimeout(() => startChallenge(landedNode, 'stage3'), 800);
-      } else if ((landedNode.type === 'revival' || landedNode.type === 'final') && landedStage === 1) {
-        // 階段 2：靈氣累積中 → 提示進度
-        setTimeout(() => setSelectedNode(newNodeIdx), 800);
-      } else if (landedStage === 3) {
+      } else {
         setTimeout(() => setSelectedNode(newNodeIdx), 800);
       }
     }, 800);
   };
 
-  // 🤖 AI 出題引擎 (支援階段模式)
   const startChallenge = async (node, mode = 'stage1') => {
-    if (!apiKey) { toast('請先在設定中填入 Gemini API Key'); return; }
+    if (!apiKey) { toast('Please set Gemini API Key in settings'); return; }
     setChallengeLoading(true);
     setChallengeNode({ ...node, mode });
     setChallengePassed(false);
     setScore({ correct: 0, total: 0, currentQ: 0 });
     setSelectedAnswer(null);
     setChallengeResult(null);
-
-    const questionCount = mode === 'stage3' ? 5 : 3;
-    const difficulty = mode === 'stage3' ? '進階難度，包含詞彙运用、句子結構與文化知識' : '初中級，著重詞彙識別與基枬文化常識';
-    const prompt = `你是台灣語言學習遊戲的出題老師。請針對台灣景點「${node.name}」（位於${node.region}），出${questionCount}道${difficulty}的學習挑戰題。
-每題必須包含：與該地相關的外語詞彙或文化知識問題、4個選項（只能1個正確）、正確答案索引(0-3)、一句中文解釋。
-嚴格以此JSON格式回傳，不加其他文字：[{"q":"問題","opts":["A","B","C","D"],"ans":0,"exp":"解釋"}]`;
+    const qCount = mode === 'stage3' ? 5 : 3;
+    const prompt = `You are a quiz teacher for a Taiwan language learning game. Create ${qCount} questions about the Taiwan landmark "${node.name}" in ${node.region}. Each must have: a question about local vocabulary or culture, 4 options (only 1 correct), answer index (0-3), and a brief Chinese explanation. Return ONLY this JSON array: [{"q":"question","opts":["A","B","C","D"],"ans":0,"exp":"explanation"}]`;
     try {
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -99,13 +84,14 @@ const ChroniclesView = () => {
       const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
       const jsonStr = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
       const parsed = JSON.parse(jsonStr);
+      // 🌿 驗證：確保解析結果是非空的題目陣列
       if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].q) {
         setChallenge(parsed);
       } else {
-        throw new Error('Invalid questions');
+        throw new Error('Empty or invalid question array');
       }
     } catch (e) {
-      console.warn('Falling back to preset questions:', e.message);
+      console.warn('Challenge generation fell back to default:', e.message);
       setChallenge(FALLBACK_QUESTIONS(node.name));
     } finally {
       setChallengeLoading(false);
@@ -126,26 +112,22 @@ const ChroniclesView = () => {
     if (nextQ >= challenge.length) {
       const finalCorrect = score.correct + (challengeResult === 'correct' ? 1 : 0);
       const mode = challengeNode?.mode;
-      const passThreshold = mode === 'stage3' ? 4 : 2; // 終極試煉需 4/5，初階需 2/3
+      const passThreshold = mode === 'stage3' ? 4 : 2;
       const passed = finalCorrect >= passThreshold;
       setChallengePassed(passed);
       const nodeIdx = FORMOSA_MAP_NODES.findIndex(n => n.name === challengeNode?.name);
       if (passed) {
         if (mode === 'stage1') {
           completeStage1(nodeIdx);
-          toast(`✨ ${challengeNode?.name} 輪廓已喚醒！持續學習累積靈氣吧！`);
+          toast(`Stage 1 unlocked! Keep learning to fill the aura.`);
           earnDice(1);
         } else if (mode === 'stage3') {
-          const success = completeStage3(nodeIdx);
-          if (success) {
-            toast(`🏆 ${challengeNode?.name} 完全復興！可以種植守護植物了！`);
-            earnDice(3);
-          } else {
-            toast('❌ 精華不足，無法完成復興儀式！');
-          }
+          const ok = completeStage3(nodeIdx);
+          if (ok) { toast(`${challengeNode?.name} fully revived!`); earnDice(3); }
+          else { toast('Not enough essence for the revival ritual!'); }
         }
       } else {
-        toast(`💪 答對 ${finalCorrect}/${challenge.length} 題，繼續努力！獲得 1 顆骰子`);
+        toast(`${finalCorrect}/${challenge.length} correct. Keep trying! +1 dice`);
         earnDice(1);
       }
       setScore(s => ({ ...s, currentQ: -1, correct: finalCorrect }));
@@ -181,12 +163,12 @@ const ChroniclesView = () => {
   };
 
   const handleRevive = (nodeIdx) => {
-    const success = reviveNode(nodeIdx);
+    const success = completeStage3(nodeIdx);
     if (success) {
-      toast(`✨ ${FORMOSA_MAP_NODES[nodeIdx].name} 已恢復往日光彩！`);
+      toast(`${FORMOSA_MAP_NODES[nodeIdx].name} fully revived!`);
       setSelectedNode(null);
     } else {
-      toast("❌ 精華能量不足，請繼續學習累積。");
+      toast('Not enough essence!');
     }
   };
 
@@ -225,65 +207,42 @@ const ChroniclesView = () => {
             const stage = getStage(idx);
             const aura = getAura(idx);
             const plantedTree = expedition.plantedTrees?.[idx] || expedition.plantedTrees?.[String(idx)];
-            const auraPercent = node.auraRequired > 0 ? Math.round((aura / node.auraRequired) * 100) : 0;
-
-            // 三階段視覺樣式
+            const auraReq = node.auraRequired || 0;
+            const auraPercent = auraReq > 0 ? Math.round((aura / auraReq) * 100) : 0;
+            const nodeEmoji = stage === 3 ? node.emoji : stage === 2 ? '✨' : stage === 1 ? '🌫️' : '☁️';
             const circleStyle = stage === 3 ? 'bg-white border-[#8b7355]'
-              : stage === 2 ? 'bg-amber-50 border-amber-500 ring-4 ring-amber-400/30'
-              : stage === 1 ? 'bg-stone-100 border-stone-400 opacity-80'
+              : stage === 2 ? 'bg-amber-50 border-amber-500'
+              : stage === 1 ? 'bg-stone-100 border-stone-400'
               : 'bg-stone-200 border-stone-300 grayscale opacity-50';
-
-            const stageEmoji = stage === 3 ? node.emoji
-              : stage === 2 ? '✨'
-              : stage === 1 ? '🌫️'
-              : '☁️';
-
             return (
-              <div 
-                key={idx} 
-                id={`node-${idx}`}
-                className={`relative flex items-center ${idx % 2 === 0 ? 'flex-row' : 'flex-row-reverse'} transition-all duration-500`}
-              >
-                {/* Node Circle */}
+              <div key={idx} id={`node-${idx}`}
+                className={`relative flex items-center ${idx % 2 === 0 ? 'flex-row' : 'flex-row-reverse'} transition-all duration-500`}>
                 <div className="relative flex-shrink-0">
-                  <button
-                    onClick={() => setSelectedNode(idx)}
-                    className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center text-3xl shadow-xl border-4 transition-all ${circleStyle} ${isCurrent ? 'scale-125 border-emerald-500 bg-white ring-8 ring-emerald-500/20' : ''}`}
-                  >
-                    {stageEmoji}
+                  <button onClick={() => setSelectedNode(idx)}
+                    className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center text-3xl shadow-xl border-4 transition-all ${circleStyle} ${isCurrent ? 'scale-125 border-emerald-500 bg-white ring-8 ring-emerald-500/20' : ''}`}>
+                    {nodeEmoji}
                   </button>
-                  {/* 植物守護圖示 */}
                   {plantedTree && stage === 3 && (
                     <div className="absolute -top-2 -right-2 bg-white rounded-full w-8 h-8 flex items-center justify-center text-sm shadow-md border-2 border-emerald-500">
                       {NATIVE_PLANT_DB.find(p => p.name === plantedTree)?.emoji || '🌿'}
                     </div>
                   )}
                 </div>
-
-                {/* Node Label + Aura Bar */}
                 <div className={`mx-4 flex-1 min-w-0 ${idx % 2 === 0 ? 'text-left' : 'text-right'}`}>
                   <h4 className={`font-black font-chn text-sm ${stage >= 1 ? 'text-[#5d4037]' : 'text-stone-300'}`}>
                     {stage >= 1 ? node.name : '未知領域'}
                   </h4>
                   <p className="text-[10px] text-stone-400 font-bold uppercase tracking-tighter mb-1">
-                    {stage === 3 ? '✅ 已復興' : stage === 2 ? '⚡ 靈氣充滿' : stage === 1 ? `🌫️ 靈氣 ${auraPercent}%` : '🔒 未探索'}
+                    {stage === 3 ? '✅ Revived' : stage === 2 ? '⚡ Aura Full' : stage === 1 ? `🌫️ Aura ${auraPercent}%` : '🔒 Unexplored'}
                   </p>
-                  {/* 靈氣進度條 (stage 1 & 2) */}
-                  {(stage === 1 || stage === 2) && node.auraRequired > 0 && (
-                    <div className={`h-1.5 rounded-full overflow-hidden ${idx % 2 === 0 ? '' : 'ml-auto'} w-20`}
-                      style={{ background: '#e5e7eb' }}>
-                      <div 
-                        className={`h-full rounded-full transition-all duration-500 ${stage === 2 ? 'bg-amber-500' : 'bg-emerald-400'}`}
-                        style={{ width: `${auraPercent}%` }}
-                      />
+                  {(stage === 1 || stage === 2) && auraReq > 0 && (
+                    <div className={`h-1.5 rounded-full overflow-hidden w-20 ${idx % 2 !== 0 ? 'ml-auto' : ''}`} style={{background:'#e5e7eb'}}>
+                      <div className={`h-full rounded-full transition-all duration-500 ${stage === 2 ? 'bg-amber-500' : 'bg-emerald-400'}`}
+                        style={{width:`${auraPercent}%`}} />
                     </div>
                   )}
                 </div>
-
-                {/* Current Indicator */}
-                {isCurrent && (
-                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-2xl animate-bounce">📍</div>
-                )}
+                {isCurrent && <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-2xl animate-bounce">📍</div>}
               </div>
             );
           })}
@@ -320,106 +279,79 @@ const ChroniclesView = () => {
       {/* ── Modals ── */}
       
       {selectedNode !== null && FORMOSA_MAP_NODES[selectedNode] && (() => {
-        const selNode = FORMOSA_MAP_NODES[selectedNode];
-        const selStage = getStage(selectedNode);
-        const selAura = getAura(selectedNode);
-        const auraRequired = selNode.auraRequired || 0;
-        const auraPercent = auraRequired > 0 ? Math.round((selAura / auraRequired) * 100) : 100;
-
+        const sNode = FORMOSA_MAP_NODES[selectedNode];
+        const sStage = getStage(selectedNode);
+        const sAura = getAura(selectedNode);
+        const auraReq = sNode.auraRequired || 0;
+        const auraPercent = auraReq > 0 ? Math.round((sAura / auraReq) * 100) : 100;
         return (
           <div className="absolute inset-0 z-40 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 animate-fadeIn">
             <div className="bg-white rounded-[2.5rem] w-full max-w-sm overflow-hidden shadow-2xl animate-popup-fade">
-              {/* 標頭 */}
-              <div className={`p-6 text-white text-center ${selStage === 3 ? 'bg-[#8b7355]' : selStage === 2 ? 'bg-amber-600' : 'bg-stone-500'}`}>
-                <div className="text-5xl mb-2">{selStage >= 1 ? selNode.emoji : '☁️'}</div>
-                <h3 className="text-2xl font-black font-chn">{selStage >= 1 ? selNode.name : '未知領域'}</h3>
-                <p className="text-xs opacity-80 mt-1">{selNode.region} • {
-                  selStage === 3 ? '✅ 完全復興' :
-                  selStage === 2 ? '⚡ 靈氣充滿，準備終極試煉' :
-                  selStage === 1 ? `🌫️ 靈氣累積中 ${auraPercent}%` : '🔒 尚未探索'
-                }</p>
+              <div className={`p-6 text-white text-center ${sStage === 3 ? 'bg-[#8b7355]' : sStage === 2 ? 'bg-amber-600' : 'bg-stone-500'}`}>
+                <div className="text-5xl mb-2">{sStage >= 1 ? sNode.emoji : '☁️'}</div>
+                <h3 className="text-2xl font-black font-chn">{sStage >= 1 ? sNode.name : 'Unknown Region'}</h3>
+                <p className="text-xs opacity-80 mt-1">{sNode.region} • {sStage === 3 ? '✅ Fully Revived' : sStage === 2 ? '⚡ Aura Full — Ready for Final Trial' : sStage === 1 ? `🌫️ Aura ${auraPercent}%` : '🔒 Unexplored'}</p>
               </div>
-
               <div className="p-6">
-                <p className="text-sm text-stone-600 font-chn leading-relaxed mb-4 text-center">
-                  {selNode.description}
-                </p>
-
-                {/* 靈氣進度條 (stage 1 & 2) */}
-                {(selStage === 1 || selStage === 2) && auraRequired > 0 && (
+                <p className="text-sm text-stone-600 font-chn leading-relaxed mb-4 text-center">{sNode.description}</p>
+                {(sStage === 1 || sStage === 2) && auraReq > 0 && (
                   <div className="mb-4">
-                    <div className="flex justify-between text-xs text-stone-400 mb-1">
-                      <span>靈氣進度</span>
-                      <span>{selAura} / {auraRequired}</span>
-                    </div>
+                    <div className="flex justify-between text-xs text-stone-400 mb-1"><span>Aura Progress</span><span>{sAura}/{auraReq}</span></div>
                     <div className="h-3 bg-stone-100 rounded-full overflow-hidden border border-stone-200">
-                      <div className={`h-full rounded-full transition-all duration-700 ${selStage === 2 ? 'bg-amber-500' : 'bg-emerald-400'}`}
-                        style={{ width: `${auraPercent}%` }} />
+                      <div className={`h-full rounded-full transition-all duration-700 ${sStage === 2 ? 'bg-amber-500' : 'bg-emerald-400'}`} style={{width:`${auraPercent}%`}} />
                     </div>
-                    <p className="text-xs text-stone-400 mt-2 text-center font-chn">
-                      {selStage === 1 ? '繼續在其他模式學習以累積靈氣' : '靈氣已充滿！擲骰子到達此地開始終極試煉'}
-                    </p>
+                    <p className="text-xs text-stone-400 mt-2 text-center">{sStage === 1 ? 'Keep learning to fill aura' : 'Aura full! Roll dice here for Final Trial'}</p>
                   </div>
                 )}
-
-                {/* 精華成本 (stage 2 顯示終極試煉資訊) */}
-                {selStage === 2 && Object.keys(selNode.finalCost || {}).length > 0 && (
+                {sStage === 2 && Object.keys(sNode.finalCost || {}).length > 0 && (
                   <div className="bg-amber-50 rounded-2xl p-4 border border-amber-200 mb-4">
-                    <h5 className="text-xs font-black text-amber-700 uppercase mb-3 text-center tracking-widest">終極試煉所需精華</h5>
+                    <h5 className="text-xs font-black text-amber-700 uppercase mb-3 text-center tracking-widest">Essence Required</h5>
                     <div className="flex justify-around">
-                      {Object.entries(selNode.finalCost).map(([type, amt]) => (
+                      {Object.entries(sNode.finalCost).map(([type, amt]) => (
                         <div key={type} className="flex flex-col items-center">
                           <span className="text-xl">{type === 'light' ? '☀️' : type === 'rain' ? '💧' : '🌱'}</span>
-                          <span className={`text-sm font-black ${(essence[type] || 0) >= amt ? 'text-emerald-600' : 'text-red-400'}`}>
-                            {essence[type] || 0} / {amt}
-                          </span>
+                          <span className={`text-sm font-black ${(essence[type]||0) >= amt ? 'text-emerald-600' : 'text-red-400'}`}>{essence[type]||0}/{amt}</span>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
-
-                {/* 已復興：植樹區 */}
-                {selStage === 3 && (
-                  <div className="flex flex-col gap-4">
+                {sStage === 3 && (
+                  <div className="flex flex-col gap-3">
                     <div className="bg-emerald-50 p-3 rounded-2xl border border-emerald-100 text-center">
-                      <span className="text-emerald-700 font-bold text-sm">✅ 此地已完全復興</span>
+                      <span className="text-emerald-700 font-bold text-sm">✅ Fully Revived</span>
                     </div>
                     {unlockedPlants.length > 0 && (
-                      <div className="border-t pt-4">
-                        <h5 className="text-xs font-black text-stone-400 uppercase mb-3 tracking-widest">守護靈派駐</h5>
+                      <div className="border-t pt-3">
+                        <h5 className="text-xs font-black text-stone-400 uppercase mb-3 tracking-widest">Guardian Spirit</h5>
                         <div className="flex overflow-x-auto gap-3 pb-2 no-scrollbar">
                           {unlockedPlants.map(pName => {
                             const pData = NATIVE_PLANT_DB.find(p => p.name === pName);
                             const isPlanted = expedition.plantedTrees?.[selectedNode] === pName || expedition.plantedTrees?.[String(selectedNode)] === pName;
                             return (
                               <button key={pName} onClick={() => handlePlant(selectedNode, pName)}
-                                className={`shrink-0 w-16 h-16 rounded-2xl flex flex-col items-center justify-center border-2 transition-all p-1
-                                  ${isPlanted ? 'bg-emerald-100 border-emerald-500' : 'bg-stone-50 border-stone-200 hover:border-emerald-300'}`}>
+                                className={`shrink-0 w-16 h-16 rounded-2xl flex flex-col items-center justify-center border-2 transition-all p-1 ${isPlanted ? 'bg-emerald-100 border-emerald-500' : 'bg-stone-50 border-stone-200 hover:border-emerald-300'}`}>
                                 <span className="text-2xl">{pData?.emoji}</span>
-                                <span className="text-[8px] text-stone-400 font-bold leading-tight text-center">{pName.slice(0,3)}</span>
+                                <span className="text-[8px] text-stone-400 font-bold">{pName.slice(0,3)}</span>
                               </button>
                             );
                           })}
                         </div>
                       </div>
-                        );
-                      })}
-                    </div>
+                    )}
                   </div>
-                </div>
-              )}
-
-              <button 
-                onClick={() => setSelectedNode(null)}
-                className="w-full mt-4 py-3 text-stone-400 font-bold text-sm"
-              >
-                關閉視窗
-              </button>
+                )}
+                {sStage === 0 && (
+                  <div className="bg-stone-50 rounded-2xl p-4 text-center border border-stone-100">
+                    <p className="text-stone-400 text-sm">Roll dice to reach this location and begin awakening</p>
+                  </div>
+                )}
+                <button onClick={() => setSelectedNode(null)} className="w-full mt-4 py-3 text-stone-400 font-bold text-sm">Close</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Random Event Modal */}
       {showEvent && (
