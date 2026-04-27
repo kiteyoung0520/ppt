@@ -3,7 +3,7 @@ import { useGame, NATIVE_PLANT_DB } from '../../../context/GameContext';
 import { FORMOSA_MAP_NODES } from '../../../store/useGameStore';
 import { useAuth } from '../../../context/AuthContext';
 import { useSettings } from '../../../context/SettingsContext';
-import { callGemini } from '../../../services/api';
+import { smartGeminiFetch } from '../../../services/api';
 import { toast } from '../../ui/Toast';
 
 const ChroniclesView = () => {
@@ -43,14 +43,14 @@ const ChroniclesView = () => {
 
   const scrollRef = useRef(null);
 
-  // 🤖 翻譯歷史沿革 (自動調度最新模型)
+  // 🤖 智慧型翻譯歷史沿革
   useEffect(() => {
     if (selectedNode !== null && getStage(selectedNode) === 3 && FORMOSA_MAP_NODES[selectedNode]?.history) {
       const node = FORMOSA_MAP_NODES[selectedNode];
       
       const translateHistory = async () => {
         if (!apiKey) {
-          setHistoryTranslation("請在設定中填寫您的 Gemini API Key 以開啟雙語對照。");
+          setHistoryTranslation("請先在『個人設定』中填寫有效的 Gemini API Key。");
           return;
         }
 
@@ -64,8 +64,17 @@ const ChroniclesView = () => {
           
           TEXT: ${node.history}`;
           
-          const result = await callGemini(prompt, apiKey, { temperature: 0.3 });
-          setHistoryTranslation(result);
+          const result = await smartGeminiFetch(apiKey, prompt);
+          
+          if (!result.success) throw new Error(result.error);
+
+          const translatedText = result.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          
+          if (translatedText) {
+            setHistoryTranslation(translatedText.trim());
+          } else {
+            setHistoryTranslation("翻譯靈力不足，請檢查 API Key 額度。");
+          }
         } catch (error) {
           console.error('History translation error:', error);
           setHistoryTranslation(`連線失敗: ${error.message}。請確認網路環境或 API Key 是否正確。`);
@@ -125,9 +134,13 @@ const ChroniclesView = () => {
     setChallengeResult(null);
     const qCount = mode === 'stage3' ? 5 : 3;
     const prompt = `You are a quiz teacher for a Taiwan language learning game. Create ${qCount} questions about the Taiwan landmark "${node.name}" in ${node.region}. Each must have: a question about local vocabulary or culture, 4 options (only 1 correct), answer index (0-3), and a brief Chinese explanation. Return ONLY this JSON array: [{"q":"question","opts":["A","B","C","D"],"ans":0,"exp":"explanation"}]`;
+    
     try {
-      const result = await callGemini(prompt, apiKey, { temperature: 0.9 });
-      const jsonStr = result.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      const result = await smartGeminiFetch(apiKey, prompt);
+      if (!result.success) throw new Error(result.error);
+
+      const text = result.data?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+      const jsonStr = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
       const parsed = JSON.parse(jsonStr);
       if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].q) {
         setChallenge(parsed);
@@ -135,8 +148,9 @@ const ChroniclesView = () => {
         throw new Error('Invalid JSON structure');
       }
     } catch (e) {
-      console.warn('Challenge generation fell back to default:', e.message);
-      setChallenge(FALLBACK_QUESTIONS(node.name));
+      console.warn('Challenge generation failed, using fallback:', e.message);
+      // Assuming FALLBACK_QUESTIONS exists globally or is imported
+      setChallenge(typeof FALLBACK_QUESTIONS !== 'undefined' ? FALLBACK_QUESTIONS(node.name) : []);
     } finally {
       setChallengeLoading(false);
     }
