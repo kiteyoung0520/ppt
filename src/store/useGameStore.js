@@ -62,6 +62,20 @@ export const NATIVE_PLANT_DB = [
   }
 ];
 
+// 🌿 福爾摩沙遠征地圖節點定義 (大富翁棋盤)
+export const FORMOSA_MAP_NODES = [
+  { id: 0, name: "起點：台北", region: "北部", type: "start", emoji: "🏛️", description: "語林冒險的起點，這裡充滿了尋語者的氣息。" },
+  { id: 1, name: "陽明山", region: "北部", type: "chance", emoji: "♨️", description: "硫磺與迷霧交織，或許會遇到神祕的靈力事件？" },
+  { id: 2, name: "九份山城", region: "北部", type: "revival", emoji: "🏮", cost: { light: 100 }, description: "昔日的黃金之城，等待尋語者重新點亮紅燈籠。" },
+  { id: 3, name: "竹科綠廊", region: "北部", type: "fate", emoji: "🧪", description: "科技與自然的交匯，這裡的能量波動很不穩定。" },
+  { id: 4, name: "阿里山", region: "中部", type: "revival", emoji: "🚂", cost: { soil: 200 }, description: "神木守護的森林，需要深厚的土地精華才能喚醒。" },
+  { id: 5, name: "日月潭", region: "中部", type: "revival", emoji: "🛶", cost: { rain: 200 }, description: "湖光山色，這裡是雨露精華最純淨的地方。" },
+  { id: 6, name: "安平古堡", region: "南部", type: "revival", emoji: "🏰", cost: { light: 150, soil: 150 }, description: "歷史的基石，唯有智慧能重現古都的光輝。" },
+  { id: 7, name: "墾丁南灣", region: "南部", type: "revival", emoji: "🏝️", cost: { rain: 300 }, description: "熱情的陽光與海洋，需要大量雨露來維持生態平衡。" },
+  { id: 8, name: "太魯閣峽谷", region: "東部", type: "revival", emoji: "⛰️", cost: { light: 300, rain: 200 }, description: "大理石般的意志，唯有最強大的精華能復興此地。" },
+  { id: 9, name: "台東三仙台", region: "東部", type: "final", emoji: "🌉", cost: { light: 500, rain: 500, soil: 500 }, description: "傳說中仙人留下的足跡，語林之境的終極復興目標。" }
+];
+
 export const useGameStore = create(
   persist(
     (set, get) => ({
@@ -78,6 +92,13 @@ export const useGameStore = create(
           light: 0,  // From ReadingRoom
           rain: 0,   // From Translator/EchoValley
           soil: 0    // From VocabBook
+        },
+        // 🌿 遠征進度數據
+        expedition: {
+          currentNode: 0,      // 目前所在的節點 ID
+          diceRemaining: 5,    // 剩餘骰子數
+          revivedNodes: [0],   // 已復興的據點 ID 列表
+          plantedTrees: {}     // 植樹記錄 { nodeIndex: plantName }
         }
       },
       streak: 0,
@@ -283,6 +304,7 @@ export const useGameStore = create(
 
         set({ savedWords: [newWord, ...savedWords] });
         addEssence('soil', 5); // Learning new word adds soil essence
+        get().earnDice(1); // 🌿 收藏單字獲得 1 顆骰子
         recordActivity();
       },
 
@@ -305,6 +327,7 @@ export const useGameStore = create(
           };
         });
         set({ savedWords: updated });
+        if (remembered) get().earnDice(1); // 🌿 複習成功獲得 1 顆骰子
       },
 
       removeWord: (word, langKey) => {
@@ -333,7 +356,8 @@ export const useGameStore = create(
           if (res.status === 'success') {
             const newArt = { ...article, id: res.data.id, date: new Date() };
             set({ savedArticles: [newArt, ...savedArticles] });
-            toast("✨ 文章已成功加入轉錄庫！");
+            get().earnDice(2); // 🌿 儲存文章獲得 2 顆骰子
+            toast("✨ 文章已成功加入轉錄庫！獲得 2 顆骰子 🎲");
           }
         } catch (e) {
           console.error("Store: Failed to save article:", e);
@@ -353,8 +377,100 @@ export const useGameStore = create(
         }
       },
 
+      // --- Actions: Expedition (Monopoly Mode) ---
+      rollDice: () => {
+        const { stats, recordActivity } = get();
+        if (stats.expedition.diceRemaining <= 0) return null;
+
+        const roll = Math.floor(Math.random() * 6) + 1;
+        const nextNode = (stats.expedition.currentNode + roll) % FORMOSA_MAP_NODES.length;
+        
+        set((state) => ({
+          stats: {
+            ...state.stats,
+            expedition: {
+              ...state.stats.expedition,
+              currentNode: nextNode,
+              diceRemaining: state.stats.expedition.diceRemaining - 1
+            }
+          }
+        }));
+
+        recordActivity();
+        return roll;
+      },
+
+      earnDice: (amount) => {
+        set((state) => ({
+          stats: {
+            ...state.stats,
+            expedition: {
+              ...state.stats.expedition,
+              diceRemaining: state.stats.expedition.diceRemaining + amount
+            }
+          }
+        }));
+      },
+
+      reviveNode: (nodeIdx) => {
+        const node = FORMOSA_MAP_NODES[nodeIdx];
+        if (!node || node.type !== 'revival' && node.type !== 'final') return false;
+        
+        const { stats } = get();
+        const cost = node.cost || {};
+        
+        // Check if has enough essence
+        for (const [type, amount] of Object.entries(cost)) {
+          if ((stats.essence[type] || 0) < amount) return false;
+        }
+
+        // Deduct and add to revived list
+        set((state) => {
+          const newEssence = { ...state.stats.essence };
+          for (const [type, amount] of Object.entries(cost)) {
+            newEssence[type] -= amount;
+          }
+
+          return {
+            stats: {
+              ...state.stats,
+              essence: newEssence,
+              expedition: {
+                ...state.stats.expedition,
+                revivedNodes: [...new Set([...state.stats.expedition.revivedNodes, nodeIdx])]
+              }
+            }
+          };
+        });
+        return true;
+      },
+
+      plantTreeInNode: (nodeIdx, plantName) => {
+        const { stats } = get();
+        if (!stats.expedition.revivedNodes.includes(nodeIdx)) return false;
+        if (!stats.unlockedPlants.includes(plantName)) return false;
+
+        set((state) => ({
+          stats: {
+            ...state.stats,
+            expedition: {
+              ...state.stats.expedition,
+              plantedTrees: {
+                ...state.stats.expedition.plantedTrees,
+                [nodeIdx]: plantName
+              }
+            }
+          }
+        }));
+        return true;
+      },
+
       resetGameStore: () => set({
-        stats: { coins: 0, exp: 0, plantStage: 0, currentPlant: '黃花風鈴木', unlockedPlants: [], expiryDate: null, essence: {light:0, rain:0, soil:0} },
+        stats: { 
+          coins: 0, exp: 0, plantStage: 0, currentPlant: '黃花風鈴木', unlockedPlants: [], expiryDate: null, 
+          essence: {light:0, rain:0, soil:0},
+          expedition: { currentNode: 0, diceRemaining: 5, revivedNodes: [0], plantedTrees: {} }
+        },
         streak: 0,
         lastStudyDate: null,
         savedWords: [],

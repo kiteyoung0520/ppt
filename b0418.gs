@@ -227,7 +227,8 @@ function fetchUserStatsInternal(userId) {
           essence: extra.essence || {light:0, rain:0, soil:0},
           streak: extra.streak || 0,
           lastStudyDate: extra.lastStudyDate || null,
-          settings: extra.settings || {}
+          settings: extra.settings || {},
+          expedition: extra.expedition || { currentNode: 0, diceRemaining: 5, revivedNodes: [0], plantedTrees: {} }
         };
       } catch(e) {}
     }
@@ -268,7 +269,8 @@ function updateUserStatsInternal(uid, stats, words) {
       essence: stats.essence, 
       streak: stats.streak,
       lastStudyDate: stats.lastStudyDate,
-      settings: stats.settings || {}
+      settings: stats.settings || {},
+      expedition: stats.expedition || { currentNode: 0, diceRemaining: 5, revivedNodes: [0], plantedTrees: {} }
     });
     var row = [uid, stats.coins, stats.currentPlant, stats.plantStage, 0, stats.unlockedPlants.join(","), stats.exp, "", "", "", extra];
     if (f) sSheet.getRange(f.getRow(), 1, 1, 11).setValues([row]);
