@@ -79,8 +79,15 @@ const ChroniclesView = () => {
       const data = await res.json();
       const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
       const jsonStr = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      setChallenge(JSON.parse(jsonStr));
+      const parsed = JSON.parse(jsonStr);
+      // 🌿 驗證：確保解析結果是非空的題目陣列
+      if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].q) {
+        setChallenge(parsed);
+      } else {
+        throw new Error('Empty or invalid question array');
+      }
     } catch (e) {
+      console.warn('Challenge generation fell back to default:', e.message);
       setChallenge(FALLBACK_QUESTIONS(node.name));
     } finally {
       setChallengeLoading(false);
