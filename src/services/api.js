@@ -68,6 +68,51 @@ let discoveredModels = []; // 儲存自動偵測到的可用模型清單
 async function discoverModels(apiKey) {
   try {
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+  // 🤖 中央 AI 調度器：自動調用最新、最快的模型並具備備援機制
+export async function callGemini(prompt, apiKey, options = {}) {
+  const models = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+  const cleanKey = (apiKey || "").trim();
+  
+  if (!cleanKey) throw new Error("Missing API Key");
+
+  let lastError = null;
+
+  for (const model of models) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${cleanKey}`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: options.temperature || 0.7,
+            maxOutputTokens: options.maxTokens || 1000,
+          }
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) return text.trim();
+        throw new Error("Empty response from AI");
+      } else {
+        const err = await response.json().catch(() => ({}));
+        // 如果是 404 代表模型不存在，嘗試下一個；如果是 429 或是 400，也嘗試下一個
+        console.warn(`Model ${model} failed:`, err?.error?.message || response.status);
+        lastError = err?.error?.message || `HTTP ${response.status}`;
+        continue; // 嘗試下一個模型
+      }
+    } catch (e) {
+      console.error(`Error calling ${model}:`, e.message);
+      lastError = e.message;
+      continue;
+    }
+  }
+
+  throw new Error(lastError || "All models failed");
+}
     const json = await res.json();
     if (!json.models) return [];
 
@@ -212,6 +257,50 @@ export async function* streamGeminiChat(prompt, apiKey) {
   }
 
   throw lastError || new Error("語林之靈目前繁忙，請稍候再試。");
+}
+
+/**
+ * 🤖 非串流版本的中央 AI 調度器
+ * 自動輪詢可用模型，支援最新版本優先與失敗備援
+ */
+export async function callGemini(prompt, apiKey, options = {}) {
+  const models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
+  const cleanKey = (apiKey || "").trim();
+  if (!cleanKey) throw new Error("缺少 API Key");
+
+  let lastError = null;
+  for (const model of models) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${cleanKey}`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: options.temperature ?? 0.7,
+            maxOutputTokens: options.maxTokens ?? 2000,
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        lastError = err?.error?.message || `HTTP ${response.status}`;
+        console.warn(`[自動調度] 模型 ${model} 失敗: ${lastError}`);
+        continue;
+      }
+
+      const data = await response.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (text) return text.trim();
+      throw new Error("回傳內容為空");
+    } catch (e) {
+      lastError = e.message;
+      continue;
+    }
+  }
+  throw new Error(lastError || "所有 AI 模型均無法連線");
 }
 
 /**

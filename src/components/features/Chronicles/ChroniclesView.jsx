@@ -3,6 +3,7 @@ import { useGame, NATIVE_PLANT_DB } from '../../../context/GameContext';
 import { FORMOSA_MAP_NODES } from '../../../store/useGameStore';
 import { useAuth } from '../../../context/AuthContext';
 import { useSettings } from '../../../context/SettingsContext';
+import { callGemini } from '../../../services/api';
 import { toast } from '../../ui/Toast';
 
 const ChroniclesView = () => {
@@ -33,7 +34,6 @@ const ChroniclesView = () => {
 
   // 🎯 挑戰系統狀態
   const [challenge, setChallenge] = useState(null);
-  // ... (其餘狀態保持不變)
   const [challengeLoading, setChallengeLoading] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [challengeResult, setChallengeResult] = useState(null);
@@ -43,17 +43,14 @@ const ChroniclesView = () => {
 
   const scrollRef = useRef(null);
 
-  // 🤖 翻譯歷史沿革
+  // 🤖 翻譯歷史沿革 (自動調度最新模型)
   useEffect(() => {
     if (selectedNode !== null && getStage(selectedNode) === 3 && FORMOSA_MAP_NODES[selectedNode]?.history) {
       const node = FORMOSA_MAP_NODES[selectedNode];
       
       const translateHistory = async () => {
-        // 清理 Key，避免空格導致失敗
-        const cleanKey = (apiKey || "").trim();
-        
-        if (!cleanKey || cleanKey.length < 10) {
-          setHistoryTranslation("請先在『個人設定』中填寫有效的 Gemini API Key。");
+        if (!apiKey) {
+          setHistoryTranslation("請在設定中填寫您的 Gemini API Key 以開啟雙語對照。");
           return;
         }
 
@@ -67,29 +64,8 @@ const ChroniclesView = () => {
           
           TEXT: ${node.history}`;
           
-          // 使用 1.5-flash 通常更穩定且速度更快
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${cleanKey}`;
-          
-          const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-          });
-          
-          if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            const msg = errData?.error?.message || `HTTP ${response.status}`;
-            throw new Error(msg);
-          }
-
-          const result = await response.json();
-          const translatedText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
-          
-          if (translatedText) {
-            setHistoryTranslation(translatedText.trim());
-          } else {
-            setHistoryTranslation("翻譯靈力不足，請檢查 API Key 額度。");
-          }
+          const result = await callGemini(prompt, apiKey, { temperature: 0.3 });
+          setHistoryTranslation(result);
         } catch (error) {
           console.error('History translation error:', error);
           setHistoryTranslation(`連線失敗: ${error.message}。請確認網路環境或 API Key 是否正確。`);
@@ -140,7 +116,7 @@ const ChroniclesView = () => {
   };
 
   const startChallenge = async (node, mode = 'stage1') => {
-    if (!apiKey) { toast('Please set Gemini API Key in settings'); return; }
+    if (!apiKey) { toast('請先在設定中填寫 Gemini API Key'); return; }
     setChallengeLoading(true);
     setChallengeNode({ ...node, mode });
     setChallengePassed(false);
@@ -150,19 +126,13 @@ const ChroniclesView = () => {
     const qCount = mode === 'stage3' ? 5 : 3;
     const prompt = `You are a quiz teacher for a Taiwan language learning game. Create ${qCount} questions about the Taiwan landmark "${node.name}" in ${node.region}. Each must have: a question about local vocabulary or culture, 4 options (only 1 correct), answer index (0-3), and a brief Chinese explanation. Return ONLY this JSON array: [{"q":"question","opts":["A","B","C","D"],"ans":0,"exp":"explanation"}]`;
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-      });
-      const data = await res.json();
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
-      const jsonStr = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      const result = await callGemini(prompt, apiKey, { temperature: 0.9 });
+      const jsonStr = result.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
       const parsed = JSON.parse(jsonStr);
-      // 🌿 驗證：確保解析結果是非空的題目陣列
       if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].q) {
         setChallenge(parsed);
       } else {
-        throw new Error('Empty or invalid question array');
+        throw new Error('Invalid JSON structure');
       }
     } catch (e) {
       console.warn('Challenge generation fell back to default:', e.message);
