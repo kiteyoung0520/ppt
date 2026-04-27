@@ -48,20 +48,32 @@ const ChroniclesView = () => {
     if (selectedNode !== null && getStage(selectedNode) === 3 && FORMOSA_MAP_NODES[selectedNode]?.history) {
       const node = FORMOSA_MAP_NODES[selectedNode];
       const translateHistory = async () => {
-        if (!apiKey) return;
+        if (!apiKey) {
+          setHistoryTranslation("請在設定中填寫 API Key 以查看外文對照。");
+          return;
+        }
         setTransLoading(true);
         setHistoryTranslation(null);
         try {
-          const prompt = `Translate the following Traditional Chinese historical text about "${node.name}" into ${currentLang?.label || 'English'}. Keep the tone professional yet engaging for a language learner. Return ONLY the translation text without any extra notes.\n\nText: ${node.history}`;
+          // 修正：api.js 中定義的是 .name 而不是 .label
+          const langName = currentLang?.name || 'English';
+          const prompt = `Translate the following Traditional Chinese historical text about "${node.name}" into ${langName}. 
+          Return ONLY the translated text. Do not include any headers or labels.
+          
+          Text to translate: ${node.history}`;
+          
           const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
           });
+          
+          if (!res.ok) throw new Error('API request failed');
           const data = await res.json();
-          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-          setHistoryTranslation(text.trim());
+          const translated = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Translation failed.';
+          setHistoryTranslation(translated.trim());
         } catch (e) {
-          console.error('Translation failed:', e);
+          console.error('History translation error:', e);
+          setHistoryTranslation("無法取得翻譯，請檢查網路或 API Key 設定。");
         } finally {
           setTransLoading(false);
         }
@@ -380,7 +392,7 @@ const ChroniclesView = () => {
                         <div className="border-t border-[#8b7355]/10 pt-3">
                           <h5 className="text-[10px] font-black text-emerald-600 uppercase mb-1.5 flex items-center gap-1 tracking-widest">
                             <span className="w-1 h-1 bg-emerald-500 rounded-full"></span>
-                            {currentLang?.label || 'Foreign Language'}
+                            {currentLang?.name || '外文對照'}
                           </h5>
                           {transLoading ? (
                             <div className="flex gap-1 py-1">
@@ -390,7 +402,7 @@ const ChroniclesView = () => {
                             </div>
                           ) : (
                             <p className="text-xs text-stone-600 leading-relaxed font-medium">
-                              {historyTranslation || 'Translation unavailable.'}
+                              {historyTranslation || '無法取得翻譯。'}
                             </p>
                           )}
                         </div>
