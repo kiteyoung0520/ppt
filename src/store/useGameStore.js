@@ -184,13 +184,15 @@ export const useGameStore = create(
       // --- Actions: Migration ---
       migrateLegacyData: () => {
         const { stats } = get();
-        // Self-heal: If essence is missing, add it
-        if (!stats.essence) {
-          console.log("Store: Initializing missing essence field...");
+        const needsUpdate = !stats.essence || !stats.expedition;
+        if (needsUpdate) {
+          console.log("Store: Self-healing missing fields (essence/expedition)...");
           set({
             stats: {
               ...stats,
-              essence: { light: 0, rain: 0, soil: 0 }
+              essence: stats.essence || { light: 0, rain: 0, soil: 0 },
+              expedition: stats.expedition || { currentNode: 0, diceRemaining: 5, revivedNodes: [0], plantedTrees: {} },
+              unlockedPlants: Array.isArray(stats.unlockedPlants) ? stats.unlockedPlants : []
             }
           });
         }

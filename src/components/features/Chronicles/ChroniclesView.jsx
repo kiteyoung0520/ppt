@@ -5,7 +5,14 @@ import { toast } from '../../ui/Toast';
 
 const ChroniclesView = () => {
   const { stats, rollDice, earnDice, reviveNode, plantTreeInNode, addEssence } = useGame();
-  const { expedition, essence, unlockedPlants } = stats;
+
+  // 🌿 防禦性預設值：防止 localStorage 舊資料缺少欄位時崩潰
+  const DEFAULT_EXPEDITION = { currentNode: 0, diceRemaining: 5, revivedNodes: [0], plantedTrees: {} };
+  const DEFAULT_ESSENCE = { light: 0, rain: 0, soil: 0 };
+
+  const expedition = stats?.expedition || DEFAULT_EXPEDITION;
+  const essence = stats?.essence || DEFAULT_ESSENCE;
+  const unlockedPlants = Array.isArray(stats?.unlockedPlants) ? stats.unlockedPlants : [];
   
   const [isRolling, setIsRolling] = useState(false);
   const [lastRoll, setLastRoll] = useState(null);
