@@ -23,8 +23,17 @@ const TranslatorView = () => {
 
   const recognitionRef = useRef(null);
 
-  // 新增：麥克風與語音自動斷電保護
+  // 新增：麥克風與語音自動斷電保護，以及 🚀 提案三：語音預熱
   useEffect(() => {
+    // 🚀 提案三：語音引擎預熱 (TTS Engine Initialization)
+    // 趁使用者點擊進入口譯畫面的這瞬間，發送一個無聲的音訊
+    // 這會強制作業系統與瀏覽器提早將 TTS 引擎載入記憶體
+    if ('speechSynthesis' in window) {
+      const prewarmUtterance = new SpeechSynthesisUtterance('');
+      prewarmUtterance.volume = 0;
+      window.speechSynthesis.speak(prewarmUtterance);
+    }
+
     return () => {
       if (recognitionRef.current) {
         console.log("[保護機制] 離開隨身口譯，自動切斷麥克風...");

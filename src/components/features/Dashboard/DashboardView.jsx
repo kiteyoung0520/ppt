@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useGame } from '../../../context/GameContext';
 import { useSettings } from '../../../context/SettingsContext';
+import { getBestAvailableModels } from '../../../services/api';
 
 // Feature Views
 import NurseryView from '../Nursery/NurseryView';
@@ -196,7 +197,7 @@ const FeatureHub = ({ onNavigate, onOpenGreenhouse, stats, streak, savedWords, l
 
 // ── Dashboard ──────────────────────────────────────────────────────
 const DashboardView = () => {
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, apiKey } = useAuth();
   const { stats, streak, savedWords, lastStudyDate } = useGame();
   const { targetLangKey } = useSettings();
 
@@ -211,6 +212,15 @@ const DashboardView = () => {
   const [showOnboarding, setShowOnboarding] = useState(
     () => !localStorage.getItem('flg-onboarded')
   );
+
+  // 🚀 提案一：後台預先暖機 (Background Pre-warming)
+  // 當玩家進入 Dashboard，立即在背景向 Google 發出一個模型查詢請求
+  // 建立連線並快取最佳模型清單，讓第一次翻譯能達到「秒回」
+  useEffect(() => {
+    if (currentUser && apiKey) {
+      getBestAvailableModels(apiKey).catch(() => {});
+    }
+  }, [currentUser, apiKey]);
 
   const VIEW_LABELS = {
     topic: '🌱 育苗室', explore: '🌳 世界樹', speak: '🦜 迴音谷',
