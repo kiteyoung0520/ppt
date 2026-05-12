@@ -301,11 +301,11 @@ const ProfileSettingsView = () => {
           ) : (
             <div className="flex flex-col gap-4 animate-slideUp">
               <div className="flex gap-2">
-                {['建議', '錯誤', '問題', '其他'].map(type => (
+                {['建議', '錯誤', '繳費回報', '其他'].map(type => (
                   <button
                     key={type}
                     onClick={() => setFeedbackType(type)}
-                    className={`flex-1 py-2 rounded-xl text-xs font-black transition ${feedbackType === type ? 'bg-emerald-500 text-white shadow-md' : 'bg-stone-100 text-stone-500 hover:bg-stone-200'}`}
+                    className={`flex-1 py-2 rounded-xl text-[10px] sm:text-xs font-black transition ${feedbackType === type ? 'bg-emerald-500 text-white shadow-md' : 'bg-stone-100 text-stone-500 hover:bg-stone-200'}`}
                   >
                     {type}
                   </button>

@@ -207,7 +207,66 @@ function handleActivateAccount(payload) {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// 3. 統計數據與收藏
+// 4. 系統自動化：到期通知 (配合按日觸發器)
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * 📢 自動檢查到期日並寄送通知
+ * 建議設定：編輯器左側「觸發器 (鬧鐘圖示)」-> 新增觸發器 -> 
+ * 執行函式：checkExpirationsAndNotify / 事件來源：時間驅動 / 類型：按日定時
+ */
+function checkExpirationsAndNotify() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Users");
+  if (!sheet) return;
+  
+  var data = sheet.getDataRange().getValues();
+  var now = new Date();
+  var oneDayMs = 24 * 60 * 60 * 1000;
+  
+  // 從第二列開始掃描 (跳過標題)
+  for (var i = 1; i < data.length; i++) {
+    var userId = data[i][0];
+    var expiryDate = data[i][5]; // 第 6 欄
+    var email = data[i][6];      // 第 7 欄
+    
+    if (expiryDate && expiryDate instanceof Date && email) {
+      var diffDays = Math.ceil((expiryDate.getTime() - now.getTime()) / oneDayMs);
+      
+      // 根據剩餘天數發送通知
+      if (diffDays === 7) {
+        sendExpiryEmail(email, userId, "剩餘 7 天", "您的會籍即將在 7 天後到期，請記得聯繫管理員續約，以維持您的語林學習連勝！");
+      } else if (diffDays === 1) {
+        sendExpiryEmail(email, userId, "最後 24 小時", "提醒您，您的會籍將於明日到期。逾期後將無法登入系統進行學習，建議您儘速續約。");
+      } else if (diffDays === 0) {
+        sendExpiryEmail(email, userId, "今日到期", "您的會籍已於今日到期。感謝您這段時間的陪伴，期待您再次回到語林之境！");
+      }
+    }
+  }
+}
+
+function sendExpiryEmail(to, userId, status, message) {
+  var subject = "✨ [語林之境] 會籍到期提醒 - " + status;
+  var body = "親愛的園丁 " + userId + " 您好：\n\n" +
+             message + "\n\n" +
+             "💰 [續約方式]\n" +
+             "1. 完成轉帳後，請至 App 內的「個人設定」->「意見回饋」選擇「繳費回報」。\n" +
+             "2. 請附上您的轉帳日期與帳號末五碼。\n" +
+             "3. 管理員確認後將於 24 小時內為您續約。\n\n" +
+             "如有任何問題，請聯繫守護者團隊：[您的聯繫資訊或連結]\n\n" +
+             "祝您學習愉快！\n" +
+             "--- 語林之境 守護團隊 敬上";
+             
+  try {
+    MailApp.sendEmail(to, subject, body);
+    console.log("已發送通知給 " + userId + " (" + status + ")");
+  } catch (e) {
+    console.error("發送通知失敗 (" + userId + "): " + e.message);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 5. 統計數據與收藏
 // ─────────────────────────────────────────────────────────────────
 function fetchUserStatsInternal(userId) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
